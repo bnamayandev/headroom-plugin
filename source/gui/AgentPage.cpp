@@ -262,6 +262,10 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
       showMissingKey(true);
       return;
     }
+    if (settings.getApiKey(settings.getProvider()).isEmpty()) {
+      showMissingKey(false); // the agent couldn't set the amp up around the pick
+      return;
+    }
     hideNotice();
     session.browseTone3000();
   };

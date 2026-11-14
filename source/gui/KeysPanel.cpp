@@ -26,6 +26,8 @@ KeysPanel::KeysPanel(agent::Session &sess, agent::AgentSettings &sett)
     row.field.setTextToShowWhenEmpty("paste your " + row.name + " API key",
                                      colours::mutedSoft);
     row.field.onTextChange = [this, id, &row] {
+      if (detached)
+        return;
       settings.setApiKey(id, row.field.getText());
       repaint();
     };
@@ -41,6 +43,8 @@ KeysPanel::KeysPanel(agent::Session &sess, agent::AgentSettings &sett)
   styleSecret(t3k.field);
   t3k.field.setTextToShowWhenEmpty("publishable key: t3k_pub_...", colours::mutedSoft);
   t3k.field.onTextChange = [this, &t3k] {
+    if (detached)
+      return;
     const auto typed = t3k.field.getText().trim();
     secretKeyRefused = agent::Tone3000::looksLikeSecretKey(typed);
     if (!secretKeyRefused)
@@ -56,6 +60,8 @@ KeysPanel::KeysPanel(agent::Session &sess, agent::AgentSettings &sett)
   addAndMakeVisible(connectButton);
   gui::setPrimary(connectButton);
   connectButton.onClick = [this] {
+    if (detached)
+      return;
     if (waitingForCode())
       session.stop();
     else if (connected())
@@ -92,24 +98,35 @@ KeysPanel::KeysPanel(agent::Session &sess, agent::AgentSettings &sett)
   setSize(panelWidth, panelHeight);
 }
 
-KeysPanel::~KeysPanel() {
+KeysPanel::~KeysPanel() { detach(); }
+
+void KeysPanel::detach() {
+  if (detached)
+    return;
+  detached = true;
   session.removeChangeListener(this);
   settings.removeChangeListener(this);
+  setEnabled(false);
 }
 
 void KeysPanel::changeListenerCallback(juce::ChangeBroadcaster *) { fillFromSettings(); }
 
-
 void KeysPanel::fillFromSettings() {
+  if (detached)
+    return;
   for (size_t i = 0; i < providers.size(); ++i)
     if (!rows[i].field.hasKeyboardFocus(false))
       rows[i].field.setText(settings.getApiKey(providers[i]), false);
-  if (!rows[3].field.hasKeyboardFocus(false))
+  if (!rows[3].field.hasKeyboardFocus(false)) {
     rows[3].field.setText(settings.get(AgentSettings::tone3000Key), false);
-  refreshTone3000();
+    secretKeyRefused = false; // what was refused is gone from the field
   }
+  refreshTone3000();
+}
 
 void KeysPanel::refreshTone3000() {
+  if (detached)
+    return;
   const auto code = session.getSignInCode();
   connectButton.setButtonText(waitingForCode() ? "cancel"
                               : connected()    ? "sign out"
@@ -122,7 +139,7 @@ void KeysPanel::refreshTone3000() {
     codeLink.setURL(juce::URL(code.linkWithCode));
   resized();
   repaint();
-  }
+}
 
 void KeysPanel::resized() {
   screenArea = getLocalBounds().reduced(14, 0).withTrimmedTop(32).withTrimmedBottom(14);
@@ -139,11 +156,15 @@ void KeysPanel::resized() {
   status.removeFromLeft(96); // under the fields
   connectButton.setBounds(status.removeFromLeft(112));
   status.removeFromLeft(12);
-  codeLink.setBounds(status.removeFromRight(110));
+  if (codeLink.isVisible())
+    codeLink.setBounds(status.removeFromRight(110));
   statusArea = status;
-  b.removeFromTop(14);
+  // What it means gets a row of its own, as it can run to two lines.
+  b.removeFromTop(4);
+  messageArea = b.removeFromTop(40).withTrimmedLeft(96);
+  b.removeFromTop(10);
   notes.setBounds(b);
-  }
+}
 
 void KeysPanel::paint(juce::Graphics &g) {
   frame.draw(g, getLocalBounds(), 0, [this](juce::Graphics &c) {
@@ -153,36 +174,34 @@ void KeysPanel::paint(juce::Graphics &g) {
   g.setFont(caption());
   for (const auto &row : rows) {
     g.setColour(colours::muted);
-    g.drawText(row.name.toUpperCase(), row.labelArea,
-               juce::Justification::centredLeft, false);
+    g.drawText(row.name.toUpperCase(), row.labelArea, juce::Justification::centredLeft,
+               false);
   }
+  if (detached)
+    return;
   const auto code = session.getSignInCode();
+  g.setFont(sans(13.5f));
   if (code.userCode.isNotEmpty()) {
-    auto area = statusArea;
     const auto font = readout(18.0f, 0.06f);
     g.setFont(font);
     g.setColour(colours::accent());
-    g.drawText(code.userCode,
-               area.removeFromLeft(juce::roundToInt(juce::GlyphArrangement::getStringWidth(
-                                       font, code.userCode)) + 14),
-               juce::Justification::centredLeft, false);
+    g.drawText(code.userCode, statusArea, juce::Justification::centredLeft, false);
     g.setFont(sans(13.5f));
     g.setColour(colours::textSoft);
-    g.drawText("enter this at " +
-                   code.verificationUri.fromFirstOccurrenceOf("://", false, false) +
-                   ", on any device",
-               area, juce::Justification::centredLeft, true);
+    g.drawFittedText("enter this code at " +
+                         code.verificationUri.fromFirstOccurrenceOf("://", false, false) +
+                         ", on any device",
+                     messageArea, juce::Justification::topLeft, 2);
     return;
   }
-  g.setFont(sans(13.5f));
   g.setColour(secretKeyRefused ? colours::accent() : colours::textSoft);
-  g.drawText(secretKeyRefused
-                 ? "That's a secret key, which must stay on a server. Use your "
-                   "publishable one."
-             : connected() ? "signed in, and it stays that way"
-                           : "not signed in: only the built-in capture is available",
-             statusArea, juce::Justification::centredLeft, true);
-  }
+  g.drawFittedText(secretKeyRefused
+                       ? "That's a secret key, which must stay on a server. Use your "
+                         "publishable one."
+                   : connected() ? "signed in, and it stays that way"
+                                 : "not signed in: only the built-in capture is available",
+                   messageArea, juce::Justification::topLeft, 2);
+}
 
 bool KeysPanel::connected() const {
   return settings.get(AgentSettings::tone3000Refresh).isNotEmpty() ||

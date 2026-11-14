@@ -470,13 +470,13 @@ ToolBox::Outcome ToolBox::loadBuiltin(const ToolCall &call) {
 juce::String ToolBox::ensureConnected() {
   if (!tone3000.hasKey())
     return "TONE3000 isn't set up: the player needs to add their publishable key "
-           "under keys. Until then, use the built-in capture and the pedals, and "
+           "in SETTINGS (top right) > API keys. Until then, use the built-in capture and the pedals, and "
            "tell them.";
   if (tone3000.isConnected())
     return {};
   const juce::String notSignedIn =
       "The player isn't signed in to TONE3000. Use the built-in capture and the "
-      "pedals, and tell them they can sign in under keys.";
+      "pedals, and tell them they can sign in from SETTINGS (top right) > API keys.";
   if (!signInPromptAllowed)
     return notSignedIn;
 

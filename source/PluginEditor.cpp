@@ -218,6 +218,8 @@ EvilAmplifierEditor::EvilAmplifierEditor(EvilAmplifierProcessor &p)
 
 EvilAmplifierEditor::~EvilAmplifierEditor() {
   stopTimer();
+  if (keysPanel != nullptr) // its callout outlives us, but the processor may not
+    keysPanel->detach();
   audioProcessor.getModels().removeChangeListener(this);
   settings->removeChangeListener(this);
   setLookAndFeel(nullptr);
@@ -859,6 +861,7 @@ void EvilAmplifierEditor::showSettings() {
 void EvilAmplifierEditor::showKeys() {
   auto keys = std::make_unique<gui::KeysPanel>(audioProcessor.getAgent(),
                                                audioProcessor.getAgentSettings());
+  keysPanel = keys.get();
   juce::CallOutBox::launchAsynchronously(std::move(keys), settingsButton.getBounds(),
                                          &canvas);
 }

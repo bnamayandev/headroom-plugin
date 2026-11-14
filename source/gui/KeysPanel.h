@@ -15,7 +15,12 @@ public:
   KeysPanel(agent::Session &, agent::AgentSettings &);
   ~KeysPanel() override;
 
-  static constexpr int panelWidth = 580, panelHeight = 410;
+  static constexpr int panelWidth = 580, panelHeight = 440;
+
+  /** Lets go of the session and the settings, for when they're about to go: the
+      callout holding this can outlive the editor that opened it. It does
+      nothing from then on. */
+  void detach();
 
   void paint(juce::Graphics &) override;
   void resized() override;
@@ -40,8 +45,8 @@ private:
   juce::TextButton connectButton{"sign in"};
   juce::HyperlinkButton codeLink;
   juce::TextEditor notes;
-  juce::Rectangle<int> statusArea, screenArea;
+  juce::Rectangle<int> statusArea, messageArea, screenArea;
   PaintCache frame;
-  bool secretKeyRefused = false;
+  bool secretKeyRefused = false, detached = false;
 };
 } // namespace evil::gui

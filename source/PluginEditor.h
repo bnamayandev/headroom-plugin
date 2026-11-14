@@ -67,6 +67,7 @@ private:
   void showBuiltinIrs();
   void showSettings();
   void showKeys();
+  juce::Component::SafePointer<gui::KeysPanel> keysPanel;
   void applyAccent();
   void savePresetDialog();
   void stepPreset(int delta);
