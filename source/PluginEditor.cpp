@@ -128,6 +128,7 @@ EvilAmplifierEditor::EvilAmplifierEditor(EvilAmplifierProcessor &p)
   canvas.addChildComponent(pedalBoard);
   canvas.addChildComponent(tunerPage);
   canvas.addChildComponent(agentPage);
+  agentPage.onOpenKeys = [this] { showKeys(); };
 
   // Footer: metronome
   canvas.addAndMakeVisible(metronomeButton);
@@ -846,8 +847,20 @@ void EvilAmplifierEditor::showSettings() {
         standalone::showAudioSettings, standalone::saveState,
         standalone::loadState, standalone::resetToDefaultState};
   juce::CallOutBox::launchAsynchronously(
-      std::make_unique<gui::SettingsPanel>(std::move(app)),
+      std::make_unique<gui::SettingsPanel>(
+          [safe = juce::Component::SafePointer<EvilAmplifierEditor>(this)] {
+            if (safe != nullptr)
+              safe->showKeys();
+          },
+          std::move(app)),
       settingsButton.getBounds(), &canvas);
+}
+
+void EvilAmplifierEditor::showKeys() {
+  auto keys = std::make_unique<gui::KeysPanel>(audioProcessor.getAgent(),
+                                               audioProcessor.getAgentSettings());
+  juce::CallOutBox::launchAsynchronously(std::move(keys), settingsButton.getBounds(),
+                                         &canvas);
 }
 
 void EvilAmplifierEditor::stepPreset(int delta) {

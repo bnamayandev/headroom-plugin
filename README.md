@@ -170,7 +170,7 @@ harder), against the same setup with the pedals and EQ out of it. `evil-cli meas
 same reading for any setup. It takes knob positions as a guide gives them, by clock or 0-10, and
 starts each new tone by clearing what the last one left.
 
-**Setup.** Under **keys**, paste an API key for any of these. You pay the provider directly, and
+**Setup.** Open **SETTINGS** (top right) and choose **api keys & tone3000 sign-in**, then paste an API key for any of these. You pay the provider directly, and
 requests go straight from your computer to them.
 
 | | Default model | Other suggestions | Its web search |

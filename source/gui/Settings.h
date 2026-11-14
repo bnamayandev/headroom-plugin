@@ -41,10 +41,12 @@ public:
     std::function<void()> audioSettings, saveState, loadState, resetState;
   };
 
-  explicit SettingsPanel(std::optional<AppActions> = std::nullopt);
+  /** `openKeys` runs, like the app actions, once the popover has closed. */
+  explicit SettingsPanel(std::function<void()> openKeys,
+                         std::optional<AppActions> = std::nullopt);
   ~SettingsPanel() override;
 
-  static constexpr int panelWidth = 300, panelHeight = 188,
+  static constexpr int panelWidth = 300, panelHeight = 260,
                        appSectionHeight = 138;
   /** The swatch hues, in degrees; the first is the default. */
   static constexpr std::array<float, 9> swatchHues{10.0f,  350.0f, 40.0f,
@@ -67,10 +69,11 @@ private:
   // reference with it, while this panel is still closing.
   juce::SharedResourcePointer<Settings> settings;
   const bool hasAppSection;
-  juce::TextButton audioButton{"audio/midi settings..."},
+  juce::TextButton keysButton{"api keys & tone3000 sign-in..."},
+      audioButton{"audio/midi settings..."},
       saveButton{"save..."}, loadButton{"load..."}, resetButton{"reset"};
   juce::ToggleButton normaliseButton{"normalise volume"};
-  juce::Rectangle<int> audioCaption, stateCaption, levelsCaption, caption, swatchRow,
+  juce::Rectangle<int> audioCaption, stateCaption, agentCaption, levelsCaption, caption, swatchRow,
       hueStrip;
   bool draggingHue = false;
 };

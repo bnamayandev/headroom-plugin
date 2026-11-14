@@ -46,7 +46,7 @@ void Settings::setNormalisingVolume(bool on) {
   sendChangeMessage();
 }
 
-SettingsPanel::SettingsPanel(std::optional<AppActions> app)
+SettingsPanel::SettingsPanel(std::function<void()> openKeys, std::optional<AppActions> app)
     : hasAppSection(app.has_value()) {
   settings->addChangeListener(this);
   normaliseButton.setToggleState(settings->isNormalisingVolume(),
@@ -58,6 +58,8 @@ SettingsPanel::SettingsPanel(std::optional<AppActions> app)
     settings->setNormalisingVolume(normaliseButton.getToggleState());
   };
   addAndMakeVisible(normaliseButton);
+  addAction(keysButton, "Your Claude, ChatGPT and Gemini API keys for the tone agent, and your TONE3000 sign-in",
+            std::move(openKeys));
   if (app.has_value()) {
     addAction(audioButton, "Interface, inputs, sample rate and buffer size",
               std::move(app->audioSettings));
@@ -109,6 +111,10 @@ void SettingsPanel::resized() {
     resetButton.setBounds(row);
     b.removeFromTop(20);
   }
+  agentCaption = b.removeFromTop(16);
+  b.removeFromTop(8);
+  keysButton.setBounds(b.removeFromTop(28));
+  b.removeFromTop(20);
   levelsCaption = b.removeFromTop(16);
   b.removeFromTop(8);
   normaliseButton.setBounds(b.removeFromTop(26));
@@ -135,13 +141,15 @@ void SettingsPanel::paint(juce::Graphics &g) {
   g.setColour(muted);
   g.setColour(line);
   if (hasAppSection)
-    g.fillRect(levelsCaption.withY(levelsCaption.getY() - 10).withHeight(1));
+    g.fillRect(agentCaption.withY(agentCaption.getY() - 10).withHeight(1));
+  g.fillRect(levelsCaption.withY(levelsCaption.getY() - 10).withHeight(1));
   g.fillRect(caption.withY(caption.getY() - 10).withHeight(1));
   g.setColour(muted);
   if (hasAppSection) {
     g.drawText("AUDIO", audioCaption, juce::Justification::centredLeft);
     g.drawText("STATE", stateCaption, juce::Justification::centredLeft);
   }
+  g.drawText("TONE AGENT", agentCaption, juce::Justification::centredLeft);
   g.drawText("LEVELS", levelsCaption, juce::Justification::centredLeft);
   g.drawText("ACCENT", caption, juce::Justification::centredLeft);
   g.setFont(readout(13.0f));

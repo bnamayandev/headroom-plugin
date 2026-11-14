@@ -339,4 +339,33 @@ void Footswitch::paintButton(juce::Graphics &g, bool highlighted, bool down) {
     g.fillEllipse(circle(getLocalBounds().toFloat().getCentre(), (float)size * 0.32f));
   }
 }
+/** Selectable text that sizes to fit: a read-only editor with its chrome off. */
+void styleAsText(juce::TextEditor &editor, const juce::Font &font, juce::Colour colour) {
+  editor.setMultiLine(true, true);
+  editor.setReadOnly(true);
+  editor.setCaretVisible(false);
+  editor.setScrollbarsShown(false);
+  editor.setBorder(juce::BorderSize<int>(0));
+  editor.setIndents(0, 0);
+  for (const auto id : {juce::TextEditor::backgroundColourId,
+                        juce::TextEditor::outlineColourId,
+                        juce::TextEditor::focusedOutlineColourId,
+                        juce::TextEditor::shadowColourId})
+    editor.setColour(id, juce::Colours::transparentBlack);
+  editor.setColour(juce::TextEditor::textColourId, colour);
+  editor.setFont(font);
+}
+
+void styleLink(juce::HyperlinkButton &link, float size) {
+  link.setFont(sans(size, true), false, juce::Justification::centredLeft);
+  link.setColour(juce::HyperlinkButton::textColourId, colours::accent());
+}
+
+void styleSecret(juce::TextEditor &editor) {
+  editor.setPasswordCharacter((juce::juce_wchar)0x2022);
+  editor.setFont(readout(13.5f));
+  editor.setJustification(juce::Justification::centredLeft);
+  editor.setIndents(8, 0);
+  editor.setSelectAllWhenFocused(true);
+}
 } // namespace evil::gui

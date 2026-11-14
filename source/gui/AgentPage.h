@@ -5,9 +5,11 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <functional>
+
 namespace evil::gui {
 /** The agent tab: a chat with a model that researches tones and sets the amp up,
-    using the player's own API keys, which are entered on the same page. */
+    using the player's own API keys, which are entered under SETTINGS. */
 class AgentPage final : public juce::Component, private juce::ChangeListener {
 public:
   AgentPage(agent::Session &, agent::AgentSettings &);
@@ -20,30 +22,37 @@ public:
   void refresh();
   /** The tab came into view. */
   void pageShown();
-  /** Between the chat and the keys, which is what opens with no key yet. */
-  void showKeys(bool);
+
+  /** Opens the API keys, for the notice that says to add one. Set by the
+      editor, which owns the settings popover the keys live in. */
+  std::function<void()> onOpenKeys;
 
 private:
   class Transcript;
-  class KeysView;
 
   void changeListenerCallback(juce::ChangeBroadcaster *) override;
   void refreshProviderControls();
   void sendComposed();
   void setComposer(const juce::String &text);
+  /** Says what's missing, with a way to the keys, until it's added or sent. */
+  void showMissingKey(bool tone3000);
+  void updateNotice();
+  void hideNotice();
 
   agent::Session &session;
   agent::AgentSettings &settings;
 
   juce::ComboBox providerBox, modelBox;
-  juce::TextButton keysButton{"keys"}, newChatButton{"new chat"},
+  juce::TextButton newChatButton{"new chat"},
       browseButton{"browse tone3000"};
   juce::ImageComponent tone3000Logo, t3kMark;
   juce::HyperlinkButton poweredBy;
 
   std::unique_ptr<Transcript> transcript;
   juce::Viewport viewport;
-  std::unique_ptr<KeysView> keysView;
+  juce::Label noticeLabel;
+  juce::TextButton noticeButton{"open api keys"};
+  enum class Missing { nothing, apiKey, tone3000 } missing = Missing::nothing;
 
   juce::TextEditor composer;
   juce::TextButton sendButton{"send"};

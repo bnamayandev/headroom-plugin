@@ -120,4 +120,11 @@ public:
 private:
   PaintCache up, pressed;
 };
+
+/** Selectable text that sizes to fit: a read-only editor with its chrome off. */
+void styleAsText(juce::TextEditor &, const juce::Font &, juce::Colour);
+/** An accent-coloured link. */
+void styleLink(juce::HyperlinkButton &, float size = 13.0f);
+/** Field for pasting a key: shows that one's there without showing it. */
+void styleSecret(juce::TextEditor &);
 } // namespace evil::gui

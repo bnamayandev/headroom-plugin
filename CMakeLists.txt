@@ -142,6 +142,7 @@ target_sources(EvilAmplifier PRIVATE
     source/gui/AgentPage.cpp
     source/gui/EvilLookAndFeel.cpp
     source/gui/Hardware.cpp
+    source/gui/KeysPanel.cpp
     source/gui/PedalBoard.cpp
     source/gui/Settings.cpp
     source/gui/TunerPage.cpp
@@ -186,6 +187,7 @@ if(EVIL_BUILD_TOOLS)
         source/gui/AgentPage.cpp
         source/gui/EvilLookAndFeel.cpp
         source/gui/Hardware.cpp
+        source/gui/KeysPanel.cpp
         source/gui/PedalBoard.cpp
         source/gui/Settings.cpp
         source/gui/TunerPage.cpp
