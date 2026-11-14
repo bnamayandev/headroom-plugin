@@ -18,37 +18,6 @@ const std::array<const char *, 3> examples{
     "Make it creamier, and add a bit of fuzz.",
     "Set up a boost I can stomp on for the solo."};
 
-/** Selectable text that sizes to fit: a read-only editor with its chrome off. */
-void styleAsText(juce::TextEditor &editor, const juce::Font &font, juce::Colour colour) {
-  editor.setMultiLine(true, true);
-  editor.setReadOnly(true);
-  editor.setCaretVisible(false);
-  editor.setScrollbarsShown(false);
-  editor.setBorder(juce::BorderSize<int>(0));
-  editor.setIndents(0, 0);
-  for (const auto id : {juce::TextEditor::backgroundColourId,
-                        juce::TextEditor::outlineColourId,
-                        juce::TextEditor::focusedOutlineColourId,
-                        juce::TextEditor::shadowColourId})
-    editor.setColour(id, juce::Colours::transparentBlack);
-  editor.setColour(juce::TextEditor::textColourId, colour);
-  editor.setFont(font);
-}
-
-void styleLink(juce::HyperlinkButton &link, float size = 13.0f) {
-  link.setFont(sans(size, true), false, juce::Justification::centredLeft);
-  link.setColour(juce::HyperlinkButton::textColourId, colours::accent());
-}
-
-/** Field for pasting a key: shows that one's there without showing it. */
-void styleSecret(juce::TextEditor &editor) {
-  editor.setPasswordCharacter((juce::juce_wchar)0x2022);
-  editor.setFont(readout(13.5f));
-  editor.setJustification(juce::Justification::centredLeft);
-  editor.setIndents(8, 0);
-  editor.setSelectAllWhenFocused(true);
-}
-
 juce::Image brandImage(const void *data, int size) {
   return juce::ImageCache::getFromMemory(data, size);
 }
@@ -67,9 +36,23 @@ public:
     addChildComponent(hint);
     styleAsText(hint, sans(15.5f), colours::textSoft);
     hint.setJustification(juce::Justification::centred);
-    hint.setText("Describe a sound: a song, an artist, or a change to what you "
-                 "have now. It looks up the gear, finds captures on TONE3000 and "
-                 "sets the amp.");
+    refreshHint();
+  }
+
+  /** The hint says where to add a key while the provider has none. */
+  void refreshHint() {
+    juce::String text = "Describe a sound: a song, an artist, or a change to what you "
+                        "have now. It looks up the gear, finds captures on TONE3000 and "
+                        "sets the amp.";
+    if (page.settings.getApiKey(page.settings.getProvider()).isEmpty())
+      text += "\n\nFirst, add your " +
+              AgentSettings::providerName(page.settings.getProvider()) +
+              " API key in SETTINGS (top right) " + juce::String::charToString(0x2192) +
+              " API keys.";
+    if (text == hint.getText())
+      return;
+    hint.setText(text);
+    layoutForWidth(getWidth());
   }
 
   void update(const std::vector<Entry> &entries) {
@@ -99,9 +82,8 @@ public:
 
     if (rows.empty()) {
       y = 70;
-      hint.setBounds(juce::Rectangle<int>(0, y, textWidth, 48)
-                         .withSizeKeepingCentre(juce::jmin(textWidth, 560), 48));
-      y = hint.getBottom() + 18;
+      const int hintWidth = juce::jmin(textWidth, 560);
+      y += placeText(hint, (width - hintWidth) / 2, y, hintWidth) + 18;
       for (auto *button : exampleButtons) {
         button->setBounds(juce::Rectangle<int>(0, y, width, 30)
                               .withSizeKeepingCentre(juce::jmin(textWidth, 520), 30));
@@ -244,194 +226,9 @@ private:
   juce::OwnedArray<juce::TextButton> exampleButtons;
 };
 
-// --- the keys ----------------------------------------------------------------
-class AgentPage::KeysView final : public juce::Component {
-public:
-  KeysView(AgentPage &p) : page(p) {
-    const std::array<std::pair<const char *, const char *>, 3> where{
-        {{"Claude", "https://console.anthropic.com/settings/keys"},
-         {"ChatGPT", "https://platform.openai.com/api-keys"},
-         {"Gemini", "https://aistudio.google.com/apikey"}}};
-    for (size_t i = 0; i < providers.size(); ++i) {
-      auto &row = rows[i];
-      const auto id = providers[i];
-      row.name = where[i].first;
-      styleSecret(row.field);
-      row.field.setTextToShowWhenEmpty("paste your " + row.name + " API key",
-                                       colours::mutedSoft);
-      row.field.onTextChange = [this, id, &row] {
-        page.settings.setApiKey(id, row.field.getText());
-        repaint();
-      };
-      row.link.setButtonText("get a key");
-      row.link.setURL(juce::URL(where[i].second));
-      styleLink(row.link);
-      addAndMakeVisible(row.field);
-      addAndMakeVisible(row.link);
-    }
-
-    auto &t3k = rows[3];
-    t3k.name = "TONE3000";
-    styleSecret(t3k.field);
-    t3k.field.setTextToShowWhenEmpty("publishable key: t3k_pub_...", colours::mutedSoft);
-    t3k.field.onTextChange = [this, &t3k] {
-      const auto typed = t3k.field.getText().trim();
-      secretKeyRefused = agent::Tone3000::looksLikeSecretKey(typed);
-      if (!secretKeyRefused)
-        page.settings.set(AgentSettings::tone3000Key, typed);
-      refreshTone3000();
-    };
-    t3k.link.setButtonText("get a key");
-    t3k.link.setURL(juce::URL("https://www.tone3000.com/settings"));
-    styleLink(t3k.link);
-    addAndMakeVisible(t3k.field);
-    addAndMakeVisible(t3k.link);
-
-    addAndMakeVisible(connectButton);
-    gui::setPrimary(connectButton);
-    connectButton.onClick = [this] {
-      if (waitingForCode())
-        page.session.stop();
-      else if (connected())
-        page.session.disconnectTone3000();
-      else
-        page.session.connectTone3000();
-      refreshTone3000();
-    };
-    connectButton.setTooltip("Sign in once with a code, on any device. No browser "
-                             "opens, and it stays signed in.");
-
-    codeLink.setButtonText("open it here");
-    styleLink(codeLink);
-    codeLink.setTooltip("Only if you want to: this opens the sign-in page with the "
-                        "code filled in");
-    addChildComponent(codeLink);
-
-    styleAsText(notes, sans(14.0f), colours::textSoft);
-    notes.setText(
-        "Requests go straight from this computer to the company you choose, on "
-        "your account and at your cost. Keys are saved only in " +
-        AgentSettings::getDefaultFile().getFullPathName() +
-        ", which only your user can read. They're never put in presets or "
-        "sessions.\n\n"
-        "TONE3000 is the community library of NAM captures and IRs. You sign in "
-        "once with your own account there, by typing a code on any device, and "
-        "the amp keeps itself signed in. Each capture stays credited to whoever "
-        "made it.");
-    addAndMakeVisible(notes);
-
-    fillFromSettings();
-  }
-
-  void fillFromSettings() {
-    for (size_t i = 0; i < providers.size(); ++i)
-      if (!rows[i].field.hasKeyboardFocus(false))
-        rows[i].field.setText(page.settings.getApiKey(providers[i]), false);
-    if (!rows[3].field.hasKeyboardFocus(false))
-      rows[3].field.setText(page.settings.get(AgentSettings::tone3000Key), false);
-    refreshTone3000();
-  }
-
-  void refreshTone3000() {
-    const auto code = page.session.getSignInCode();
-    connectButton.setButtonText(waitingForCode() ? "cancel"
-                                : connected()    ? "sign out"
-                                                 : "sign in");
-    connectButton.setEnabled(connected() || waitingForCode() ||
-                             page.settings.get(AgentSettings::tone3000Key).isNotEmpty());
-    codeLink.setVisible(code.linkWithCode.isNotEmpty() &&
-                        agent::isSafeLink(code.linkWithCode));
-    if (codeLink.isVisible())
-      codeLink.setURL(juce::URL(code.linkWithCode));
-    resized();
-    repaint();
-  }
-
-  void resized() override {
-    auto b = getLocalBounds().reduced(16, 4);
-    b.removeFromTop(8);
-    for (auto &row : rows) {
-      auto line = b.removeFromTop(30);
-      row.labelArea = line.removeFromLeft(96);
-      row.link.setBounds(line.removeFromRight(76));
-      line.removeFromRight(8);
-      row.field.setBounds(line);
-      b.removeFromTop(8);
-    }
-    auto status = b.removeFromTop(28);
-    status.removeFromLeft(96); // under the fields
-    connectButton.setBounds(status.removeFromLeft(112));
-    status.removeFromLeft(12);
-    codeLink.setBounds(status.removeFromRight(110));
-    statusArea = status;
-    b.removeFromTop(14);
-    notes.setBounds(b);
-  }
-
-  void paint(juce::Graphics &g) override {
-    g.setFont(caption());
-    for (const auto &row : rows) {
-      g.setColour(colours::muted);
-      g.drawText(row.name.toUpperCase(), row.labelArea,
-                 juce::Justification::centredLeft, false);
-    }
-    const auto code = page.session.getSignInCode();
-    if (code.userCode.isNotEmpty()) {
-      auto area = statusArea;
-      const auto font = readout(18.0f, 0.06f);
-      g.setFont(font);
-      g.setColour(colours::accent());
-      g.drawText(code.userCode,
-                 area.removeFromLeft(juce::roundToInt(juce::GlyphArrangement::getStringWidth(
-                                         font, code.userCode)) + 14),
-                 juce::Justification::centredLeft, false);
-      g.setFont(sans(13.5f));
-      g.setColour(colours::textSoft);
-      g.drawText("enter this at " +
-                     code.verificationUri.fromFirstOccurrenceOf("://", false, false) +
-                     ", on any device",
-                 area, juce::Justification::centredLeft, true);
-      return;
-    }
-    g.setFont(sans(13.5f));
-    g.setColour(secretKeyRefused ? colours::accent() : colours::textSoft);
-    g.drawText(secretKeyRefused
-                   ? "That's a secret key, which must stay on a server. Use your "
-                     "publishable one."
-               : connected() ? "signed in, and it stays that way"
-                             : "not signed in: only the built-in capture is available",
-               statusArea, juce::Justification::centredLeft, true);
-  }
-
-private:
-  struct KeyRow {
-    juce::String name;
-    juce::TextEditor field;
-    juce::HyperlinkButton link;
-    juce::Rectangle<int> labelArea;
-  };
-
-  bool connected() const {
-    return page.settings.get(AgentSettings::tone3000Refresh).isNotEmpty() ||
-           page.settings.get(AgentSettings::tone3000Access).isNotEmpty();
-  }
-  bool waitingForCode() const {
-    return page.session.getSignInCode().userCode.isNotEmpty();
-  }
-
-  AgentPage &page;
-  std::array<KeyRow, 4> rows;
-  juce::TextButton connectButton{"sign in"};
-  juce::HyperlinkButton codeLink;
-  juce::TextEditor notes;
-  juce::Rectangle<int> statusArea;
-  bool secretKeyRefused = false;
-};
-
 // --- the page ----------------------------------------------------------------
 AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
-    : session(s), settings(a), transcript(std::make_unique<Transcript>(*this)),
-      keysView(std::make_unique<KeysView>(*this)) {
+    : session(s), settings(a), transcript(std::make_unique<Transcript>(*this)) {
   for (const auto id : providers)
     providerBox.addItem(AgentSettings::providerName(id), (int)id + 1);
   providerBox.setTooltip("Whose model answers, on your own API key");
@@ -440,8 +237,6 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
     if (id != settings.getProvider())
       settings.setProvider(id);
     refreshProviderControls();
-    if (settings.getApiKey(id).isEmpty())
-      showKeys(true);
   };
   addAndMakeVisible(providerBox);
 
@@ -454,11 +249,6 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
   };
   addAndMakeVisible(modelBox);
 
-  addAndMakeVisible(keysButton);
-  keysButton.setClickingTogglesState(false);
-  keysButton.setTooltip("Your API keys and your TONE3000 sign-in");
-  keysButton.onClick = [this] { showKeys(!keysView->isVisible()); };
-
   addAndMakeVisible(newChatButton);
   newChatButton.setTooltip("Start over. The amp stays as it is");
   newChatButton.onClick = [this] { session.newChat(); };
@@ -469,10 +259,14 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
                           "thing here that opens your browser.");
   browseButton.onClick = [this] {
     if (settings.get(AgentSettings::tone3000Key).isEmpty()) {
-      showKeys(true);
+      showMissingKey(true);
       return;
     }
-    showKeys(false);
+    if (settings.getApiKey(settings.getProvider()).isEmpty()) {
+      showMissingKey(false); // the agent couldn't set the amp up around the pick
+      return;
+    }
+    hideNotice();
     session.browseTone3000();
   };
 
@@ -497,7 +291,17 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
   viewport.setScrollBarThickness(8);
   viewport.getVerticalScrollBar().setColour(juce::ScrollBar::thumbColourId, colours::line);
   addAndMakeVisible(viewport);
-  addChildComponent(*keysView);
+
+  noticeLabel.setFont(sans(14.0f));
+  noticeLabel.setColour(juce::Label::textColourId, colours::accent());
+  noticeLabel.setMinimumHorizontalScale(1.0f);
+  addChildComponent(noticeLabel);
+  gui::setPrimary(noticeButton);
+  noticeButton.onClick = [this] {
+    if (onOpenKeys)
+      onOpenKeys();
+  };
+  addChildComponent(noticeButton);
 
   composer.setMultiLine(true, true);
   composer.setReturnKeyStartsNewLine(false);
@@ -523,7 +327,6 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
   settings.addChangeListener(this);
   refreshProviderControls();
   transcript->update(session.getEntries());
-  showKeys(settings.getApiKey(settings.getProvider()).isEmpty());
   refresh();
 }
 
@@ -539,8 +342,6 @@ void AgentPage::resized() {
   providerBox.setBounds(top.removeFromLeft(110));
   top.removeFromLeft(6);
   modelBox.setBounds(top.removeFromLeft(190));
-  top.removeFromLeft(6);
-  keysButton.setBounds(top.removeFromLeft(58));
   top.removeFromLeft(6);
   newChatButton.setBounds(top.removeFromLeft(84));
 
@@ -561,8 +362,15 @@ void AgentPage::resized() {
 
   panelArea = b;
   screenArea = panelArea.reduced(14, 0).withTrimmedTop(32).withTrimmedBottom(16);
-  viewport.setBounds(screenArea.reduced(12, 8));
-  keysView->setBounds(screenArea.reduced(2));
+  auto inner = screenArea.reduced(12, 8);
+  if (noticeLabel.isVisible()) {
+    auto notice = inner.removeFromBottom(36);
+    noticeButton.setBounds(notice.removeFromRight(128).withSizeKeepingCentre(128, 28));
+    notice.removeFromRight(10);
+    noticeLabel.setBounds(notice);
+    inner.removeFromBottom(6);
+  }
+  viewport.setBounds(inner);
   transcript->layoutForWidth(viewport.getMaximumVisibleWidth() - 4);
   viewport.setViewPosition(0, transcript->getHeight());
 }
@@ -573,10 +381,9 @@ void AgentPage::paint(juce::Graphics &g) {
   const auto width = statusText.isEmpty()
                          ? 0.0f
                          : juce::GlyphArrangement::getStringWidth(font, statusText) + 14.0f;
-  const bool keys = keysView->isVisible();
-  frame.draw(g, getLocalBounds(), (keys ? 1 : 0) + (juce::int64)width * 2,
-             [this, keys, width](juce::Graphics &c) {
-               headerRule = drawPanel(c, panelArea, keys ? "keys" : "tone agent", width);
+  frame.draw(g, getLocalBounds(), (juce::int64)width * 2,
+             [this, width](juce::Graphics &c) {
+               headerRule = drawPanel(c, panelArea, "tone agent", width);
                drawRecess(c, screenArea.toFloat(), 4.0f);
              });
   if (statusText.isEmpty())
@@ -612,17 +419,43 @@ void AgentPage::refresh() {
 
 void AgentPage::pageShown() {
   refresh();
-  if (isShowing() && !keysView->isVisible())
+  if (isShowing())
     composer.grabKeyboardFocus();
 }
 
-void AgentPage::showKeys(bool shouldShow) {
-  keysView->setVisible(shouldShow);
-  viewport.setVisible(!shouldShow);
-  keysButton.setToggleState(shouldShow, juce::dontSendNotification);
-  if (shouldShow)
-    keysView->fillFromSettings();
-  repaint();
+void AgentPage::showMissingKey(bool tone3000) {
+  missing = tone3000 ? Missing::tone3000 : Missing::apiKey;
+  updateNotice();
+}
+
+void AgentPage::hideNotice() {
+  missing = Missing::nothing;
+  updateNotice();
+}
+
+void AgentPage::updateNotice() {
+  if (missing == Missing::apiKey && settings.getApiKey(settings.getProvider()).isNotEmpty())
+    missing = Missing::nothing;
+  if (missing == Missing::tone3000 && settings.get(AgentSettings::tone3000Key).isNotEmpty())
+    missing = Missing::nothing;
+
+  const bool show = missing != Missing::nothing;
+  if (show)
+    noticeLabel.setText(
+        missing == Missing::apiKey
+            ? "No " + AgentSettings::providerName(settings.getProvider()) +
+                  " API key yet. Add one in SETTINGS (top right) " +
+                  juce::String::charToString(0x2192) + " API keys."
+            : "Browsing TONE3000 needs your TONE3000 key. Add it in SETTINGS "
+              "(top right) " + juce::String::charToString(0x2192) +
+                  " API keys, where you can also sign in.",
+        juce::dontSendNotification);
+  const bool changed = noticeLabel.isVisible() != show;
+  noticeLabel.setVisible(show);
+  noticeButton.setVisible(show && (bool)onOpenKeys);
+  if (changed)
+    resized();
+  transcript->refreshHint();
 }
 
 void AgentPage::refreshProviderControls() {
@@ -644,15 +477,21 @@ void AgentPage::sendComposed() {
   const auto text = composer.getText().trim();
   if (text.isEmpty())
     return;
-  if (session.send(text))
+  if (settings.getApiKey(settings.getProvider()).isEmpty()) {
+    showMissingKey(false); // the text stays where it is
+    return;
+  }
+  if (session.send(text)) {
     composer.clear();
+    hideNotice();
+  }
 }
 
 void AgentPage::changeListenerCallback(juce::ChangeBroadcaster *source) {
-  if (keysView->isVisible())
-    keysView->refreshTone3000();
-  if (source == &settings)
+  if (source == &settings) {
+    updateNotice();
     return;
+  }
   const bool atEnd = viewport.getViewPositionY() + viewport.getViewHeight() >=
                      transcript->getHeight() - 24;
   transcript->update(session.getEntries());

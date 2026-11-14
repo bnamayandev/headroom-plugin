@@ -2727,7 +2727,7 @@ TEST_CASE("Browsing TONE3000 turns a picked tone into a request", "[agent]") {
   CHECK(http->getRequests().back().url.contains("anthropic"));
 }
 
-TEST_CASE("Signing in from the keys page shows the code until it's done", "[agent]") {
+TEST_CASE("Signing in to TONE3000 shows the code until it's done", "[agent]") {
   TestFiles files;
   files.settings.set(AgentSettings::tone3000Key, "t3k_pub_test");
   FakeAmp amp;

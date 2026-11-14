@@ -13,7 +13,7 @@
 // page with a custom tuning, hearing notes played into the processor, and
 // settings.png: the settings popover open, with a blue accent, app.png and
 // app-settings.png: the header and the popover as the standalone app has them,
-// and agent-keys.png, agent-sign-in.png, agent-empty.png and agent-chat.png: the
+// and agent-no-key.png, agent-keys.png, agent-sign-in.png, agent-empty.png and agent-chat.png: the
 // agent tab, with made-up keys and a made-up conversation. The saved accent,
 // tuning and keys are ignored, so every shot starts from the default and none
 // can show a real key.
@@ -260,7 +260,7 @@ int main(int argc, char **argv) {
   processor.editorPage = 0;
   editor.reset(processor.createEditor());
   if (auto *button = findButton(*editor, "settings")) {
-    evil::gui::SettingsPanel panel;
+    evil::gui::SettingsPanel panel(nullptr);
     juce::CallOutBox box(panel, button->getBounds(),
                          button->getParentComponent());
     ok = save(*editor, dir.getChildFile("settings.png"), 1.5f) && ok;
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
     std::unique_ptr<juce::AudioProcessorEditor> appEditor(app.createEditor());
     ok = save(*appEditor, dir.getChildFile("app.png"), 1.5f) && ok;
     if (auto *button = findButton(*appEditor, "settings")) {
-      evil::gui::SettingsPanel panel(evil::gui::SettingsPanel::AppActions{});
+      evil::gui::SettingsPanel panel(nullptr, evil::gui::SettingsPanel::AppActions{});
       juce::CallOutBox box(panel, button->getBounds(),
                            button->getParentComponent());
       ok = save(*appEditor, dir.getChildFile("app-settings.png"), 1.5f) && ok;
@@ -305,8 +305,19 @@ int main(int argc, char **argv) {
   }
 
   processor.editorPage = 3;
-  editor.reset(processor.createEditor()); // no key yet: opens on the keys
-  ok = save(*editor, dir.getChildFile("agent-keys.png"), 1.5f) && ok;
+  editor.reset(processor.createEditor()); // no key yet: the empty tab says where to add one
+  ok = save(*editor, dir.getChildFile("agent-no-key.png"), 1.5f) && ok;
+  // The keys live in their own callout, opened from the settings popover.
+  const auto saveKeys = [&](const char *name) {
+    if (auto *button = findButton(*editor, "settings")) {
+      evil::gui::KeysPanel panel(processor.getAgent(), *agentSettings);
+      juce::CallOutBox box(panel, button->getBounds(), button->getParentComponent());
+      return save(*editor, dir.getChildFile(name), 1.5f);
+    }
+    std::cout << "FAILED: no settings button" << std::endl;
+    return false;
+  };
+  ok = saveKeys("agent-keys.png") && ok;
 
   agentSettings->set(evil::agent::AgentSettings::tone3000Key, "t3k_pub_not_real");
   processor.getAgent().showForSnapshot(
@@ -314,7 +325,7 @@ int main(int argc, char **argv) {
            "https://www.tone3000.com/activate?code=WXYZ-1234"});
   editor.reset();
   editor.reset(processor.createEditor());
-  ok = save(*editor, dir.getChildFile("agent-sign-in.png"), 1.5f) && ok;
+  ok = saveKeys("agent-sign-in.png") && ok;
   processor.getAgent().showForSnapshot({});
 
   using Entry = evil::agent::Session::Entry;

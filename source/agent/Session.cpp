@@ -427,7 +427,7 @@ void Session::runTurn(const juce::String &text) {
     Entry entry;
     entry.kind = Entry::Kind::error;
     entry.text = "Add your " + AgentSettings::providerName(id) +
-                 " API key under keys, and send this again.";
+                 " API key in SETTINGS (top right) > API keys, and send this again.";
     add(std::move(entry));
     return;
   }

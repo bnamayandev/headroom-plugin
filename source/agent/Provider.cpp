@@ -55,7 +55,7 @@ ModelReply failure(const juce::String &who, const juce::String &apiKey,
   if (status == 0)
     reply.error = "Couldn't reach " + who + ": " + response.error + ".";
   else if (badKey)
-    reply.error = withDetail(who + " rejected the API key. Check it under keys.");
+    reply.error = withDetail(who + " rejected the API key. Check it in SETTINGS (top right) > API keys.");
   else if (status == 404)
     reply.error = withDetail(who + " doesn't recognise that model.");
   else if (status == 429)

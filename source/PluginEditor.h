@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "gui/AgentPage.h"
+#include "gui/KeysPanel.h"
 #include "gui/EvilLookAndFeel.h"
 #include "gui/PedalBoard.h"
 #include "gui/Settings.h"
@@ -65,6 +66,8 @@ private:
   void showBuiltinModels();
   void showBuiltinIrs();
   void showSettings();
+  void showKeys();
+  juce::Component::SafePointer<gui::KeysPanel> keysPanel;
   void applyAccent();
   void savePresetDialog();
   void stepPreset(int delta);
