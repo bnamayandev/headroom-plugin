@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Hardware.h"
+#include "Neon.h"
 #include "agent/Session.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>

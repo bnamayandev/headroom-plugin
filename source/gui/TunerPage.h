@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Hardware.h"
+#include "Neon.h"
 #include "dsp/PitchDetector.h"
 #include "state/Tunings.h"
 
@@ -58,6 +58,7 @@ private:
   tuning::Reading reading;
   int lockedString = -1;
   float needle = 0.0f; // cents, eased towards the reading
+  float travel = 0.0f; // how far the tunnel behind the note has rushed
   float secondsSinceAnalysis = 0.0f;
   bool analyseNext = true;
 

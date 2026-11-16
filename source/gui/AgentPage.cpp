@@ -34,7 +34,7 @@ public:
       addChildComponent(button);
     }
     addChildComponent(hint);
-    styleAsText(hint, sans(15.5f), colours::textSoft);
+    styleAsText(hint, body(13.5f), colours::textSoft);
     hint.setJustification(juce::Justification::centred);
     refreshHint();
   }
@@ -117,14 +117,21 @@ public:
     g.setFont(caption());
     for (const auto &row : rows) {
       if (!row->captionArea.isEmpty()) {
-        g.setColour(row->kind == Entry::Kind::error ? colours::accent()
-                                                    : colours::muted);
+        // A prompt's marker, then who's speaking: you in cyan, the agent in
+        // the accent, a problem in yellow.
+        const auto colour = row->kind == Entry::Kind::user        ? colours::textSoft
+                            : row->kind == Entry::Kind::assistant ? colours::accent()
+                                                                  : colours::yellow;
+        auto area = row->captionArea.toFloat();
+        g.setColour(colour);
+        g.fillRect(area.removeFromLeft(5.0f).withSizeKeepingCentre(5.0f, 5.0f));
+        area.removeFromLeft(7.0f);
         g.drawText(row->kind == Entry::Kind::user        ? "YOU"
                    : row->kind == Entry::Kind::assistant ? "AGENT"
                                                          : "PROBLEM",
-                   row->captionArea, juce::Justification::centredLeft, false);
+                   area, juce::Justification::centredLeft, false);
       }
-      g.setColour(colours::mutedSoft);
+      g.setColour(colours::muted);
       if (!row->linkCaptionArea.isEmpty())
         g.drawText(row->linksCaption, row->linkCaptionArea,
                    juce::Justification::centredLeft, false);
@@ -148,7 +155,7 @@ private:
     auto row = std::make_unique<Row>();
     row->kind = entry.kind;
     const bool activity = entry.kind == Entry::Kind::activity;
-    styleAsText(row->body, activity ? readout(12.0f) : sans(15.5f),
+    styleAsText(row->body, activity ? readout(17.0f) : body(13.5f),
                 activity ? colours::muted : colours::text);
     row->body.setText((activity ? juce::String::charToString(0x00b7) + " " : juce::String()) +
                       entry.text);
@@ -206,7 +213,7 @@ private:
     }
     int cursor = x;
     constexpr int linkHeight = 18;
-    const auto font = sans(13.0f, true);
+    const auto font = body(12.5f);
     for (auto *link : links) {
       const int linkWidth =
           juce::roundToInt(juce::GlyphArrangement::getStringWidth(font, link->getButtonText())) + 14;
@@ -289,11 +296,10 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
   viewport.setViewedComponent(transcript.get(), false);
   viewport.setScrollBarsShown(true, false);
   viewport.setScrollBarThickness(8);
-  viewport.getVerticalScrollBar().setColour(juce::ScrollBar::thumbColourId, colours::line);
   addAndMakeVisible(viewport);
 
-  noticeLabel.setFont(sans(14.0f));
-  noticeLabel.setColour(juce::Label::textColourId, colours::accent());
+  noticeLabel.setFont(body(12.5f));
+  noticeLabel.setColour(juce::Label::textColourId, colours::yellow);
   noticeLabel.setMinimumHorizontalScale(1.0f);
   addChildComponent(noticeLabel);
   gui::setPrimary(noticeButton);
@@ -305,7 +311,7 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
 
   composer.setMultiLine(true, true);
   composer.setReturnKeyStartsNewLine(false);
-  composer.setFont(sans(15.5f));
+  composer.setFont(body(14.0f));
   composer.setBorder(juce::BorderSize<int>(0));
   composer.setIndents(10, 10);
   composer.setScrollbarsShown(false);
@@ -345,7 +351,7 @@ void AgentPage::resized() {
   top.removeFromLeft(6);
   newChatButton.setBounds(top.removeFromLeft(84));
 
-  auto browse = top.removeFromRight(216); // the label centres clear of the mark
+  auto browse = top.removeFromRight(244); // the label centres clear of the mark
   browseButton.setBounds(browse);
   t3kMark.setBounds(browse.withTrimmedLeft(10).withWidth(30).withSizeKeepingCentre(30, 10));
   top.removeFromRight(10);
@@ -377,14 +383,14 @@ void AgentPage::resized() {
 
 void AgentPage::paint(juce::Graphics &g) {
   using namespace colours;
-  const auto font = readout(12.0f);
+  const auto font = readout(16.0f);
   const auto width = statusText.isEmpty()
                          ? 0.0f
                          : juce::GlyphArrangement::getStringWidth(font, statusText) + 14.0f;
   frame.draw(g, getLocalBounds(), (juce::int64)width * 2,
              [this, width](juce::Graphics &c) {
                headerRule = drawPanel(c, panelArea, "tone agent", width);
-               drawRecess(c, screenArea.toFloat(), 4.0f);
+               drawScreen(c, screenArea.toFloat());
              });
   if (statusText.isEmpty())
     return;

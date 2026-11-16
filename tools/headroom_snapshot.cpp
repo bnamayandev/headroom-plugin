@@ -4,17 +4,17 @@
 //   headroom-snapshot <output-directory>
 //
 // Writes editor.png (default size), editor@1.5x.png, editor-playing.png: the
-// amp page with a guitar going through it and the EQ moved, editor-violet.png:
-// another accent, stretched.png, which simulates a window manager forcing the
+// amp page with a guitar going through it and the EQ moved, editor-yellow.png:
+// another neon, stretched.png, which simulates a window manager forcing the
 // window to an odd size, to check the layout scales uniformly, pedals.png and
 // pedals@1x.png: the pedal page with a few pedals on,
 // editor-typing.png and pedals-typing.png: those pages with every value box open
 // for typing, tuner-idle.png, tuner.png, tuner-in-tune.png and tuner-locked.png: the tuner
 // page with a custom tuning, hearing notes played into the processor, and
-// settings.png: the settings popover open, with a blue accent, app.png and
+// settings.png: the settings popover open, with the yellow neon, app.png and
 // app-settings.png: the header and the popover as the standalone app has them,
 // and agent-no-key.png, agent-keys.png, agent-sign-in.png, agent-empty.png and agent-chat.png: the
-// agent tab, with made-up keys and a made-up conversation. The saved accent,
+// agent tab, with made-up keys and a made-up conversation. The saved neon,
 // tuning and keys are ignored, so every shot starts from the default and none
 // can show a real key.
 
@@ -84,10 +84,10 @@ bool saveTyping(juce::Component &page, const juce::File &file) {
 bool savePlaying(juce::AudioProcessorEditor &editor,
                  headroom::HeadroomProcessor &processor, const juce::File &file) {
   auto *spectrum = findChild<headroom::gui::Spectrum>(editor);
-  auto *tubes = findChild<headroom::gui::TubeBank>(editor);
+  auto *cube = findChild<headroom::gui::WireCube>(editor);
   std::vector<headroom::gui::LevelMeter *> meters;
   findAll(editor, meters);
-  if (spectrum == nullptr || tubes == nullptr || meters.size() != 2) {
+  if (spectrum == nullptr || cube == nullptr || meters.size() != 2) {
     std::cout << "FAILED: no amp page displays" << std::endl;
     return false;
   }
@@ -126,11 +126,11 @@ bool savePlaying(juce::AudioProcessorEditor &editor,
   }
   meters[0]->pushPeak(0.35f, 1.0f / 30.0f);
   meters[1]->pushPeak(0.95f, 1.0f / 30.0f);
-  tubes->snapTo(true, 0.85f);
+  cube->snapTo(true, 0.85f);
 
   const bool ok = save(editor, file, 1.5f);
 
-  tubes->snapTo(true, 0.0f);
+  cube->snapTo(true, 0.0f);
   meters[0]->pushPeak(0.0f, 100.0f);
   meters[1]->pushPeak(0.0f, 100.0f);
   for (size_t b = 0; b < bands.size(); ++b) {
@@ -183,9 +183,9 @@ int main(int argc, char **argv) {
       juce::File::getCurrentWorkingDirectory().getChildFile(argv[1]);
   dir.createDirectory();
 
-  // Held for the whole run, so editors don't reload the saved accent.
+  // Held for the whole run, so editors don't reload the saved neon.
   juce::SharedResourcePointer<headroom::gui::Settings> settings;
-  headroom::gui::colours::setAccentHue(headroom::gui::colours::defaultAccentHue);
+  headroom::gui::colours::setNeon(headroom::gui::colours::defaultNeon);
 
   // Before anything reads it, so the player's real keys never get near a shot.
   juce::SharedResourcePointer<headroom::agent::AgentSettings> agentSettings;
@@ -254,8 +254,8 @@ int main(int argc, char **argv) {
     ok = false;
   }
 
-  // Not settings->setAccentHue(), which would save it.
-  headroom::gui::colours::setAccentHue(215.0f / 360.0f);
+  // Not settings->setNeon(), which would save it.
+  headroom::gui::colours::setNeon(headroom::gui::Neon::yellow);
   editor.reset();
   processor.editorPage = 0;
   editor.reset(processor.createEditor());
@@ -269,12 +269,11 @@ int main(int argc, char **argv) {
     ok = false;
   }
 
-  headroom::gui::colours::setAccentHue(244.0f / 360.0f);
   editor.reset();
   editor.reset(processor.createEditor());
-  ok = save(*editor, dir.getChildFile("editor-violet.png"), 1.5f) && ok;
+  ok = save(*editor, dir.getChildFile("editor-yellow.png"), 1.5f) && ok;
 
-  headroom::gui::colours::setAccentHue(headroom::gui::colours::defaultAccentHue);
+  headroom::gui::colours::setNeon(headroom::gui::colours::defaultNeon);
   editor.reset();
   {
     // The app is the same editor on a processor that knows it's in the app.

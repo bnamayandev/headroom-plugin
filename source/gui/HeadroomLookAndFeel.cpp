@@ -5,54 +5,37 @@
 namespace headroom::gui {
 namespace colours {
 namespace {
-float accentHue = defaultAccentHue;
-
-/** Blues read much darker than reds at the same HSL lightness, and would sink
-    into the black panel: lift them to match. */
-float lightnessAt(float hue) {
-  const float degrees = hue * 360.0f;
-  const float fromBlue = juce::jmin(std::abs(degrees - 245.0f), 360.0f - std::abs(degrees - 245.0f));
-  const float lift = juce::jmax(0.0f, 1.0f - fromBlue / 65.0f);
-  return 0.56f + 0.13f * lift * lift * (3.0f - 2.0f * lift);
-}
+Neon chosen = defaultNeon;
 } // namespace
 
-juce::Colour accentAt(float hue) {
-  return juce::Colour::fromHSL(hue, 0.92f, lightnessAt(hue), 1.0f);
+juce::Colour neon(Neon which) {
+  switch (which) {
+  case Neon::yellow:
+    return yellow;
+  case Neon::cyan:
+    return cyan;
+  case Neon::magenta:
+    break;
+  }
+  return magenta;
 }
-juce::Colour accent() { return accentAt(accentHue); }
-juce::Colour accentHover() {
-  return juce::Colour::fromHSL(accentHue, 0.95f, lightnessAt(accentHue) + 0.1f, 1.0f);
-}
-float getAccentHue() { return accentHue; }
-void setAccentHue(float hue) { accentHue = hue - std::floor(hue); }
+juce::Colour accent() { return neon(chosen); }
+Neon getNeon() { return chosen; }
+void setNeon(Neon which) { chosen = which; }
 } // namespace colours
 
 namespace {
-const juce::Colour black = juce::Colours::black, white = juce::Colours::white;
-constexpr float keyCorner = 3.0f;
-constexpr int capWidth = 32, capHeight = 17, capMargin = 4;
-
 juce::Typeface::Ptr load(const char *data, int size) {
   return juce::Typeface::createSystemTypefaceFor(data, (size_t)size);
 }
 
-juce::Font makeFont(const juce::Typeface::Ptr &face, float size,
-                    float tracking) {
+juce::Font makeFont(const juce::Typeface::Ptr &face, float size, float tracking) {
   return juce::Font(juce::FontOptions(face).withPointHeight(size).withKerningFactor(
       tracking));
 }
 
 /** Accent at a given strength over transparent, like CSS color-mix(). */
 juce::Colour tint(float amount) { return colours::accent().withAlpha(amount); }
-
-void drawGlow(juce::Graphics &g, juce::Point<float> centre, float radius,
-              float strength = 0.55f) {
-  juce::ColourGradient glow(tint(strength), centre, tint(0.0f),
-                            centre.translated(radius, 0.0f), true);
-  g.setGradientFill(glow);
-  g.fillEllipse(circle(centre, radius));
-}
 
 bool isPrimary(const juce::Button &button) {
   return button.getProperties()["primary"];
@@ -74,84 +57,66 @@ bool isBipolar(const juce::Slider &slider) {
 juce::TextLayout layoutTooltip(const juce::String &text, juce::Colour colour) {
   juce::AttributedString s;
   s.setJustification(juce::Justification::centredLeft);
-  s.append(text, sans(13.5f), colour);
+  s.append(text, body(12.0f), colour);
   juce::TextLayout layout;
-  layout.createLayoutWithBalancedLineLengths(s, 340.0f);
+  layout.createLayoutWithBalancedLineLengths(s, 360.0f);
   return layout;
 }
 
-/** A fader's cap: a ridged metal block with its level line across the middle. */
-void paintFaderCap(juce::Graphics &g, juce::Rectangle<float> cap) {
-  g.setColour(black.withAlpha(0.55f));
-  g.fillRoundedRectangle(cap.translated(0.0f, 2.0f).expanded(1.0f, 1.0f), 3.0f);
-
-  juce::ColourGradient metal(juce::Colour(0xff77777d), 0.0f, cap.getY(),
-                             juce::Colour(0xff222225), 0.0f, cap.getBottom(), false);
-  metal.addColour(0.46, juce::Colour(0xff3c3c41));
-  metal.addColour(0.54, juce::Colour(0xff1d1d20));
-  g.setGradientFill(metal);
-  g.fillRoundedRectangle(cap, 2.0f);
-  g.setColour(black.withAlpha(0.8f));
-  g.drawRoundedRectangle(cap, 2.0f, 0.8f);
-  g.setColour(white.withAlpha(0.24f));
-  g.fillRect(cap.reduced(1.5f, 0.0f).withY(cap.getY() + 0.8f).withHeight(0.8f));
-
-  g.setColour(black.withAlpha(0.32f));
-  for (const float offset : {-4.0f, -2.5f, 2.5f, 4.0f})
-    g.fillRect(cap.reduced(2.0f, 0.0f).withHeight(0.7f).withY(cap.getCentreY() + offset));
+/** Fills a path twice more, a pixel or so either side, in magenta and cyan: a
+    misconverged tube's fringes, for whatever the pointer is over. */
+void strokeFringes(juce::Graphics &g, const juce::Path &path, float width, float offset) {
+  g.setColour(colours::magenta.withAlpha(0.55f));
+  g.strokePath(path, juce::PathStrokeType(width),
+               juce::AffineTransform::translation(-offset, 0.0f));
+  g.setColour(colours::cyan.withAlpha(0.55f));
+  g.strokePath(path, juce::PathStrokeType(width),
+               juce::AffineTransform::translation(offset, 0.0f));
 }
 
-/** A vertical fader: a slot cut in the panel, the value lit in the accent from
-    its centre (or bottom), and a metal cap riding in it. */
+/** A vertical fader: a thin slot, the value lit along it from its centre (or
+    bottom), and a cap riding in it with pointers either side, like a cursor. */
 void drawFader(juce::Graphics &g, juce::Rectangle<float> bounds, float sliderPos,
-               juce::Slider &slider, PaintCache &capCache) {
+               juce::Slider &slider) {
   using namespace colours;
   const bool enabled = slider.isEnabled();
   const bool hot = enabled && slider.isMouseOverOrDragging();
-  const auto x = bounds.getCentreX();
+  const float x = std::floor(bounds.getCentreX()) + 0.5f;
   const auto top = (float)slider.getPositionOfValue(slider.getMaximum());
   const auto bottom = (float)slider.getPositionOfValue(slider.getMinimum());
 
-  const auto slot = juce::Rectangle<float>::leftTopRightBottom(x - 1.5f, top - 3.0f,
-                                                               x + 1.5f, bottom + 3.0f);
-  g.setColour(white.withAlpha(0.09f));
-  g.fillRoundedRectangle(slot, 1.5f);
+  g.setColour(blue.withAlpha(0.9f));
+  g.fillRect(juce::Rectangle<float>(x - 0.5f, top - 3.0f, 1.0f, bottom - top + 6.0f));
 
   const auto from = isBipolar(slider) ? (top + bottom) * 0.5f : bottom;
-  const auto lit = juce::Rectangle<float>::leftTopRightBottom(
-      x - 1.0f, juce::jmin(from, sliderPos), x + 1.0f, juce::jmax(from, sliderPos));
-  if (!lit.isEmpty()) {
-    g.setColour(tint(0.3f));
-    g.fillRoundedRectangle(lit.expanded(1.5f, 0.5f), 2.0f);
-    g.setColour(!enabled ? mutedSoft : hot ? accentHover() : accent());
-    g.fillRoundedRectangle(lit, 1.0f);
+  if (std::abs(sliderPos - from) > 0.5f) {
+    juce::Path lit;
+    lit.startNewSubPath(x, from);
+    lit.lineTo(x, sliderPos);
+    strokeNeon(g, lit, enabled ? accent() : mutedSoft, 2.0f,
+               enabled ? (hot ? 1.0f : 0.6f) : 0.0f);
   }
 
-  capCache.draw(g, {x - capWidth * 0.5f - capMargin, sliderPos - capHeight * 0.5f - capMargin},
-                capWidth + 2 * capMargin, capHeight + 2 * capMargin, 0, [](juce::Graphics &c) {
-                  paintFaderCap(c, juce::Rectangle<float>((float)capMargin, (float)capMargin,
-                                                          (float)capWidth, (float)capHeight));
-                });
-  // The level line, lit like a knob's pointer.
-  g.setColour(!enabled ? muted : hot ? white : text);
-  g.fillRect(juce::Rectangle<float>((float)capWidth - 6.0f, 1.8f)
-                 .withCentre({x, sliderPos}));
-}
+  const auto cap = juce::Rectangle<float>(24.0f, 11.0f).withCentre({x, std::round(sliderPos)});
+  const auto edge = !enabled ? mutedSoft : hot ? accent() : cyan;
+  g.setColour(glass);
+  g.fillRect(cap);
+  juce::Path frame;
+  frame.addRectangle(cap);
+  if (hot)
+    strokeFringes(g, frame, 1.0f, 1.2f);
+  strokeNeon(g, frame, edge, 1.0f, hot ? 0.7f : 0.0f);
+  g.setColour(enabled ? colours::text : muted);
+  g.fillRect(cap.withSizeKeepingCentre(cap.getWidth() - 8.0f, 1.5f));
 
-/** A key: raised, lit from above, pressed in while held. */
-void drawKey(juce::Graphics &g, juce::Rectangle<float> b, juce::Colour top,
-             juce::Colour bottom, bool down, juce::Colour edge) {
-  g.setColour(black.withAlpha(0.6f)); // its shadow on the panel
-  g.fillRoundedRectangle(b.translated(0.0f, down ? 0.5f : 1.2f), keyCorner);
-  g.setGradientFill(juce::ColourGradient(down ? bottom : top, 0.0f, b.getY(),
-                                         down ? top : bottom, 0.0f, b.getBottom(), false));
-  g.fillRoundedRectangle(b, keyCorner);
+  juce::Path pointers;
+  const float y = cap.getCentreY();
+  pointers.addTriangle(cap.getX() - 6.0f, y - 3.0f, cap.getX() - 6.0f, y + 3.0f,
+                       cap.getX() - 2.0f, y);
+  pointers.addTriangle(cap.getRight() + 6.0f, y - 3.0f, cap.getRight() + 6.0f, y + 3.0f,
+                       cap.getRight() + 2.0f, y);
   g.setColour(edge);
-  g.drawRoundedRectangle(b.reduced(0.5f), keyCorner, 1.0f);
-  if (!down) {
-    g.setColour(white.withAlpha(0.13f));
-    g.fillRect(b.reduced(keyCorner, 0.0f).withY(b.getY() + 1.0f).withHeight(1.0f));
-  }
+  g.fillPath(pointers);
 }
 
 /** The symbols on small keys, as strokes rather than glyphs so they stay crisp
@@ -184,39 +149,37 @@ bool drawSymbol(juce::Graphics &g, const juce::String &text, juce::Rectangle<flo
   } else {
     return false;
   }
-  g.strokePath(path, juce::PathStrokeType(1.6f, juce::PathStrokeType::curved,
-                                          juce::PathStrokeType::rounded));
+  g.strokePath(path, juce::PathStrokeType(1.6f, juce::PathStrokeType::mitered,
+                                          juce::PathStrokeType::square));
   return true;
 }
 } // namespace
 
 Typefaces::Typefaces()
-    : sans(load(HeadroomBinaryData::BarlowRegular_ttf,
-                HeadroomBinaryData::BarlowRegular_ttfSize)),
-      sansMedium(load(HeadroomBinaryData::BarlowMedium_ttf,
-                      HeadroomBinaryData::BarlowMedium_ttfSize)),
-      silk(load(HeadroomBinaryData::BarlowSemiCondensedSemiBold_ttf,
-                HeadroomBinaryData::BarlowSemiCondensedSemiBold_ttfSize)),
-      display(load(HeadroomBinaryData::BarlowCondensedExtraBoldItalic_ttf,
-                   HeadroomBinaryData::BarlowCondensedExtraBoldItalic_ttfSize)),
-      readout(load(HeadroomBinaryData::ShareTechMonoRegular_ttf,
-                   HeadroomBinaryData::ShareTechMonoRegular_ttfSize)),
-      logo(load(HeadroomBinaryData::NewRockerRegular_ttf,
-                HeadroomBinaryData::NewRockerRegular_ttfSize)) {}
+    : headline(load(HeadroomBinaryData::MichromaRegular_ttf,
+                    HeadroomBinaryData::MichromaRegular_ttfSize)),
+      caps(load(HeadroomBinaryData::OrbitronBold_ttf,
+                HeadroomBinaryData::OrbitronBold_ttfSize)),
+      logo(load(HeadroomBinaryData::OrbitronBlack_ttf,
+                HeadroomBinaryData::OrbitronBlack_ttfSize)),
+      readout(load(HeadroomBinaryData::VT323Regular_ttf,
+                   HeadroomBinaryData::VT323Regular_ttfSize)),
+      body(load(HeadroomBinaryData::IBMPlexMonoRegular_ttf,
+                HeadroomBinaryData::IBMPlexMonoRegular_ttfSize)) {}
 
-juce::Font sans(float size, bool medium, float tracking) {
+juce::Font headline(float size, float tracking) {
   const juce::SharedResourcePointer<Typefaces> faces;
-  return makeFont(medium ? faces->sansMedium : faces->sans, size, tracking);
+  return makeFont(faces->headline, size, tracking);
 }
 
-juce::Font silk(float size, float tracking) {
+juce::Font caps(float size, float tracking) {
   const juce::SharedResourcePointer<Typefaces> faces;
-  return makeFont(faces->silk, size, tracking);
+  return makeFont(faces->caps, size, tracking);
 }
 
-juce::Font display(float size, float tracking) {
+juce::Font logoFont(float size) {
   const juce::SharedResourcePointer<Typefaces> faces;
-  return makeFont(faces->display, size, tracking);
+  return makeFont(faces->logo, size, 0.0f);
 }
 
 juce::Font readout(float size, float tracking) {
@@ -224,9 +187,9 @@ juce::Font readout(float size, float tracking) {
   return makeFont(faces->readout, size, tracking);
 }
 
-juce::Font logoFont(float size) {
+juce::Font body(float size) {
   const juce::SharedResourcePointer<Typefaces> faces;
-  return makeFont(faces->logo, size, 0.0f);
+  return makeFont(faces->body, size, 0.0f);
 }
 
 void setPrimary(juce::Button &button) {
@@ -245,30 +208,33 @@ void setCompact(juce::Slider &slider) {
   slider.getProperties().set("compact", true);
 }
 
+void setHeadline(juce::Label &label) {
+  label.getProperties().set("headline", true);
+}
+
 HeadroomLookAndFeel::HeadroomLookAndFeel() {
   using namespace colours;
-  setDefaultSansSerifTypeface(typefaces->sans);
+  const auto clear = juce::Colours::transparentBlack;
+  setDefaultSansSerifTypeface(typefaces->body);
 
   setColour(juce::ResizableWindow::backgroundColourId, background);
   setColour(juce::Label::textColourId, text);
   setColour(juce::Slider::textBoxTextColourId, textSoft);
-  setColour(juce::Slider::textBoxOutlineColourId,
-            juce::Colours::transparentBlack);
-  setColour(juce::Slider::textBoxBackgroundColourId,
-            juce::Colours::transparentBlack);
-  setColour(juce::Slider::rotarySliderOutlineColourId, white.withAlpha(0.2f));
-  setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+  setColour(juce::Slider::textBoxOutlineColourId, clear);
+  setColour(juce::Slider::textBoxBackgroundColourId, clear);
+  setColour(juce::Slider::rotarySliderOutlineColourId, blue.withAlpha(0.9f));
+  setColour(juce::TextButton::buttonColourId, clear);
   setColour(juce::TextButton::textColourOffId, textSoft);
-  setColour(juce::TextButton::textColourOnId, text);
-  setColour(juce::ComboBox::backgroundColourId,
-            juce::Colours::transparentBlack);
+  setColour(juce::TextButton::textColourOnId, black);
+  setColour(juce::ComboBox::backgroundColourId, clear);
   setColour(juce::ComboBox::outlineColourId, line);
   setColour(juce::ComboBox::textColourId, text);
-  setColour(juce::ComboBox::arrowColourId, muted);
-  setColour(juce::PopupMenu::backgroundColourId, panel);
+  setColour(juce::ComboBox::arrowColourId, textSoft);
+  setColour(juce::PopupMenu::backgroundColourId, black);
   setColour(juce::PopupMenu::textColourId, textSoft);
   setColour(juce::PopupMenu::headerTextColourId, muted);
   setColour(juce::PopupMenu::highlightedTextColourId, text);
+  setColour(juce::PopupMenu::highlightedBackgroundColourId, blue.withAlpha(0.45f));
   setColour(juce::ToggleButton::textColourId, textSoft);
   setColour(juce::TextEditor::backgroundColourId, glass);
   setColour(juce::TextEditor::textColourId, text);
@@ -277,19 +243,21 @@ HeadroomLookAndFeel::HeadroomLookAndFeel() {
   setColour(juce::AlertWindow::backgroundColourId, panel);
   setColour(juce::AlertWindow::textColourId, textSoft);
   setColour(juce::AlertWindow::outlineColourId, line);
-  setColour(juce::TooltipWindow::backgroundColourId, panel);
-  setColour(juce::TooltipWindow::textColourId, textSoft);
+  setColour(juce::TooltipWindow::backgroundColourId, black);
+  setColour(juce::TooltipWindow::textColourId, text);
   setColour(juce::TooltipWindow::outlineColourId, line);
+  setColour(juce::ScrollBar::thumbColourId, cyan.withAlpha(0.5f));
+  setColour(juce::ScrollBar::trackColourId, clear);
   refreshAccent();
 }
 
 void HeadroomLookAndFeel::refreshAccent() {
-  setColour(juce::Slider::textBoxHighlightColourId, tint(0.32f));
+  setColour(juce::Slider::textBoxHighlightColourId, tint(0.35f));
   setColour(juce::TextButton::buttonOnColourId, tint(0.18f));
-  setColour(juce::PopupMenu::highlightedBackgroundColourId, tint(0.28f));
-  setColour(juce::TextEditor::highlightColourId, tint(0.32f));
+  setColour(juce::TextEditor::highlightColourId, tint(0.35f));
   setColour(juce::TextEditor::focusedOutlineColourId, colours::accent());
   setColour(juce::CaretComponent::caretColourId, colours::accent());
+  setColour(juce::HyperlinkButton::textColourId, colours::accent());
 }
 
 void HeadroomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
@@ -304,57 +272,52 @@ void HeadroomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
   const bool enabled = slider.isEnabled();
   const bool hot = enabled && slider.isMouseOverOrDragging();
   const bool small = radius < 30.0f;
+  const auto lit = !enabled ? mutedSoft
+                   : slider.isColourSpecified(juce::Slider::rotarySliderFillColourId)
+                       ? slider.findColour(juce::Slider::rotarySliderFillColourId)
+                       : accent();
 
-  // A ring of lights: every mark up to the value is lit, from the centre for
+  // The scale: a ring of ticks, lit up to the value, from the centre for
   // bipolar parameters (e.g. EQ, +/- dB).
-  const float outer = radius - 0.5f, inner = outer - (small ? 3.0f : 5.5f);
+  const float outer = radius - 2.0f, inner = outer - (small ? 3.5f : 6.0f);
   const int marks = small ? 15 : 27;
   const auto from = isBipolar(slider) ? (startAngle + endAngle) * 0.5f : startAngle;
   constexpr float nudge = 0.002f;
   const auto lower = juce::jmin(from, angle) - nudge, upper = juce::jmax(from, angle) + nudge;
-  juce::Path unlit, lit;
+  juce::Path unlitTicks, litTicks;
   for (int i = 0; i < marks; ++i) {
     const float a = startAngle + (endAngle - startAngle) * (float)i / (float)(marks - 1);
-    const bool on = a >= lower && a <= upper;
-    auto &path = on ? lit : unlit;
+    auto &path = a >= lower && a <= upper ? litTicks : unlitTicks;
     path.startNewSubPath(centre.getPointOnCircumference(inner, a));
     path.lineTo(centre.getPointOnCircumference(outer, a));
   }
-  const float markWidth = small ? 1.3f : 1.7f;
-  const juce::PathStrokeType stroke(markWidth, juce::PathStrokeType::curved,
-                                    juce::PathStrokeType::rounded);
+  const float tickWidth = small ? 1.4f : 1.8f;
   g.setColour(slider.findColour(juce::Slider::rotarySliderOutlineColourId));
-  g.strokePath(unlit, stroke);
-  const auto valueColour = !enabled ? mutedSoft : hot ? accentHover() : accent();
-  if (enabled) {
-    g.setColour(valueColour.withAlpha(0.24f));
-    g.strokePath(lit, juce::PathStrokeType(markWidth + (small ? 2.0f : 3.2f),
-                                           juce::PathStrokeType::curved,
-                                           juce::PathStrokeType::rounded));
-  }
-  g.setColour(valueColour);
-  g.strokePath(lit, stroke);
+  g.strokePath(unlitTicks, juce::PathStrokeType(tickWidth));
+  strokeNeon(g, litTicks, lit, tickWidth, enabled ? (hot ? 1.0f : 0.6f) : 0.0f);
 
-  // The knob itself. Only its pointer moves, so the rest is painted once per size.
-  const float body = inner - (small ? 1.5f : 3.0f);
-  const int size = (int)std::ceil(body * 2.8f);
-  knobBodies[juce::roundToInt(body * 10.0f)].draw(
-      g, centre.translated(-(float)size * 0.5f, -(float)size * 0.5f), size, size, 0,
-      [size, body](juce::Graphics &c) {
-        paintKnobBody(c, {(float)size * 0.5f, (float)size * 0.5f}, body);
-      });
-  if (hot) {
-    g.setColour(white.withAlpha(0.05f));
-    g.fillEllipse(circle(centre, body));
-  }
+  // The knob: an octagon turned with the value, a smaller one inside it.
+  const float face = inner - (small ? 3.0f : 5.0f);
+  juce::Path rim, core;
+  rim.addPolygon(centre, 8, face, angle);
+  core.addPolygon(centre, 8, face * 0.55f, angle);
+  g.setColour(glass);
+  g.fillPath(rim);
+  g.setColour(blue.withAlpha(enabled ? 0.9f : 0.45f));
+  g.strokePath(core, juce::PathStrokeType(1.0f));
+  if (hot)
+    strokeFringes(g, rim, 1.0f, 1.2f);
+  strokeNeon(g, rim, !enabled ? mutedSoft : cyan.withAlpha(hot ? 1.0f : 0.72f),
+             small ? 1.0f : 1.2f, hot ? 0.8f : 0.25f);
 
-  const juce::Line<float> pointer(centre.getPointOnCircumference(body * 0.36f, angle),
-                                  centre.getPointOnCircumference(body * 0.97f, angle));
-  const float pointerWidth = juce::jmax(1.6f, body * 0.075f);
-  g.setColour(black.withAlpha(0.65f));
-  g.drawLine(pointer, pointerWidth + 1.4f);
-  g.setColour(enabled ? text : muted);
-  g.drawLine(pointer, pointerWidth);
+  // The pointer, from near the middle out to the corner it turns with.
+  juce::Path pointer;
+  pointer.startNewSubPath(centre.getPointOnCircumference(face * 0.22f, angle));
+  pointer.lineTo(centre.getPointOnCircumference(face * 0.96f, angle));
+  if (hot)
+    strokeFringes(g, pointer, 2.0f, 1.5f);
+  strokeNeon(g, pointer, enabled ? colours::text : muted, small ? 1.6f : 2.0f,
+             enabled ? 0.7f : 0.0f);
 }
 
 void HeadroomLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y,
@@ -363,8 +326,7 @@ void HeadroomLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y,
                                            juce::Slider::SliderStyle style,
                                            juce::Slider &slider) {
   if (style == juce::Slider::LinearVertical) {
-    drawFader(g, juce::Rectangle<int>(x, y, width, height).toFloat(), sliderPos,
-              slider, faderCap);
+    drawFader(g, juce::Rectangle<int>(x, y, width, height).toFloat(), sliderPos, slider);
     return;
   }
   if (style != juce::Slider::LinearBar) {
@@ -372,17 +334,24 @@ void HeadroomLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y,
                                      minSliderPos, maxSliderPos, style, slider);
     return;
   }
-  // A readout you drag: a recessed window, the value a lit bar from the left.
+  // A readout you drag: a field, the value a striped bar from the left with a
+  // lit leading edge.
   using namespace colours;
   const auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat();
   const bool hot = slider.isEnabled() && slider.isMouseOverOrDragging();
-  drawRecess(g, bounds, keyCorner);
-  juce::Path outline;
-  outline.addRoundedRectangle(bounds.reduced(1.0f), keyCorner - 1.0f);
-  const juce::Graphics::ScopedSaveState save(g);
-  g.reduceClipRegion(outline);
-  g.setColour(tint(hot ? 0.4f : 0.3f));
-  g.fillRect(bounds.withRight(juce::jlimit(bounds.getX(), bounds.getRight(), sliderPos)));
+  g.setColour(glass);
+  g.fillRect(bounds);
+  const auto fill = bounds.reduced(1.0f).withRight(
+      juce::jlimit(bounds.getX() + 1.0f, bounds.getRight() - 1.0f, sliderPos));
+  if (fill.getWidth() > 0.0f) {
+    g.setColour(blue.withAlpha(hot ? 0.34f : 0.26f));
+    g.fillRect(fill);
+    drawStripes(g, fill, blue.withAlpha(hot ? 0.4f : 0.3f), 7.0f, 2.5f);
+    g.setColour(accent().withAlpha(0.85f));
+    g.fillRect(fill.withLeft(fill.getRight() - 1.5f));
+  }
+  g.setColour(cyan.withAlpha(hot ? 0.9f : 0.45f));
+  g.drawRect(bounds, 1.0f);
 }
 
 void HeadroomLookAndFeel::drawToggleButton(juce::Graphics &g,
@@ -391,45 +360,36 @@ void HeadroomLookAndFeel::drawToggleButton(juce::Graphics &g,
   using namespace colours;
   auto bounds = button.getLocalBounds().toFloat();
   const bool on = button.getToggleState();
-  const auto rocker = bounds.removeFromLeft(32.0f).withSizeKeepingCentre(32.0f, 18.0f);
-  bounds.removeFromLeft(9.0f);
+  const bool enabled = button.isEnabled();
+  const bool hot = enabled && highlighted;
 
-  // An illuminated rocker switch, in the hole it's mounted in.
-  if (on)
-    drawGlow(g, rocker.getCentre(), 26.0f, 0.3f);
-  g.setColour(white.withAlpha(0.1f));
-  g.fillRoundedRectangle(rocker.translated(0.0f, 0.8f), 2.5f);
-  g.setColour(black);
-  g.fillRoundedRectangle(rocker, 2.5f);
-
-  const auto face = rocker.reduced(1.6f);
-  const auto pressed = face.withWidth(face.getWidth() * 0.5f);
-  const auto proud = face.withTrimmedLeft(face.getWidth() * 0.5f);
-  if (on) { // lit from behind, brightest at the proud end
-    const auto hotColour = highlighted ? accentHover() : accent();
-    g.setGradientFill(juce::ColourGradient(hotColour.darker(0.55f), face.getX(), 0.0f,
-                                           hotColour.interpolatedWith(white, 0.18f),
-                                           face.getRight(), 0.0f, false));
-    g.fillRoundedRectangle(face, 1.5f);
-    g.setColour(white.withAlpha(0.32f));
-    g.fillRect(proud.reduced(1.0f, 0.0f).withHeight(1.0f).withY(proud.getY() + 0.8f));
-  } else { // dark plastic, tipped the other way
-    const auto base = juce::Colour(highlighted ? 0xff3e3e43 : 0xff2e2e32);
-    g.setGradientFill(juce::ColourGradient(base.brighter(0.2f), face.getX(), 0.0f,
-                                           base.darker(0.8f), face.getRight(), 0.0f, false));
-    g.fillRoundedRectangle(face, 1.5f);
-    g.setColour(white.withAlpha(0.14f));
-    g.fillRect(pressed.reduced(1.0f, 0.0f).withHeight(1.0f).withY(pressed.getY() + 0.8f));
+  // A slide switch: a block at the right of its track, lit, when it's on.
+  const auto track = bounds.removeFromLeft(30.0f).withSizeKeepingCentre(30.0f, 16.0f);
+  bounds.removeFromLeft(10.0f);
+  g.setColour(glass);
+  g.fillRect(track);
+  const auto slot = track.reduced(3.0f);
+  if (on) {
+    juce::Path block;
+    block.addRectangle(slot.withTrimmedLeft(slot.getWidth() * 0.5f));
+    fillNeon(g, block, enabled ? accent() : mutedSoft, enabled ? 0.8f : 0.0f);
+  } else {
+    g.setColour((enabled ? cyan : mutedSoft).withAlpha(hot ? 0.6f : 0.32f));
+    g.fillRect(slot.withWidth(slot.getWidth() * 0.5f));
   }
-  g.setColour(black.withAlpha(0.42f));
-  g.fillRect(face.withWidth(1.0f).withX(face.getCentreX() - 0.5f));
+  g.setColour(!enabled ? mutedSoft : on ? accent() : cyan.withAlpha(hot ? 0.9f : 0.55f));
+  g.drawRect(track, 1.0f);
 
-  g.setColour(!button.isEnabled() ? mutedSoft
-              : on || highlighted ? text
-                                  : textSoft);
-  g.setFont(silk(12.0f, 0.08f));
-  g.drawFittedText(button.getButtonText().toUpperCase(), bounds.toNearestInt(),
-                   juce::Justification::centredLeft, 1);
+  const auto label = button.getButtonText().toUpperCase();
+  const auto font = caps(10.0f, 0.16f);
+  const auto colour = !enabled ? mutedSoft : on || hot ? colours::text : textSoft;
+  if (hot) {
+    drawAberrated(g, label, font, bounds, juce::Justification::centredLeft, colour, 1.0f);
+    return;
+  }
+  g.setColour(colour);
+  g.setFont(font);
+  g.drawFittedText(label, bounds.toNearestInt(), juce::Justification::centredLeft, 1);
 }
 
 void HeadroomLookAndFeel::drawButtonBackground(juce::Graphics &g,
@@ -437,124 +397,294 @@ void HeadroomLookAndFeel::drawButtonBackground(juce::Graphics &g,
                                                const juce::Colour &, bool highlighted,
                                                bool down) {
   using namespace colours;
-  const auto bounds = button.getLocalBounds().toFloat().reduced(0.5f, 1.0f);
-  const auto edge = black.withAlpha(0.9f);
-  if (isTab(button)) {
-    // A key in the tray; the selected one is lit, with a bar of light along its
-    // bottom edge.
-    if (button.getToggleState()) {
-      drawKey(g, bounds, juce::Colour(0xff414146), juce::Colour(0xff26262a), false, edge);
-      const auto bar = bounds.reduced(6.0f, 0.0f)
-                           .withHeight(2.0f)
-                           .withY(bounds.getBottom() - 3.5f);
-      g.setColour(tint(0.42f));
-      g.fillRoundedRectangle(bar.expanded(1.5f, 1.5f), 2.0f);
-      g.setColour(accent());
-      g.fillRoundedRectangle(bar, 1.0f);
-    } else if (highlighted) {
-      g.setColour(white.withAlpha(0.06f));
-      g.fillRoundedRectangle(bounds, keyCorner);
+  const auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
+  const bool enabled = button.isEnabled();
+  const bool hot = enabled && highlighted;
+  const auto shape = bevelBox(bounds, juce::jmin(6.0f, bounds.getHeight() * 0.25f));
+
+  if (isTab(button)) { // the selected tab is lit solid; the others are only words
+    if (button.getToggleState())
+      fillNeon(g, shape, cyan, 0.7f);
+    else if (hot) {
+      g.setColour(blue.withAlpha(0.35f));
+      g.fillPath(shape);
     }
     return;
   }
-  if (button.getToggleState()) { // selected: the key lit from inside
-    const auto top = accent().interpolatedWith(black, down ? 0.55f : highlighted ? 0.35f : 0.45f);
-    drawKey(g, bounds, top, top.interpolatedWith(black, 0.5f), down, edge);
-  } else if (isPrimary(button) && button.isEnabled()) {
-    const auto top = juce::Colour(0xff37373c).interpolatedWith(accent(), highlighted ? 0.42f : 0.28f);
-    drawKey(g, bounds, top, top.interpolatedWith(black, 0.45f), down, edge);
-  } else {
-    const auto top = juce::Colour(highlighted ? 0xff47474d : 0xff37373c);
-    const auto bottom = juce::Colour(highlighted ? 0xff29292d : 0xff1f1f23);
-    drawKey(g, bounds, top, bottom, down, edge);
+
+  const auto colour = !enabled ? mutedSoft : isPrimary(button) ? accent() : cyan;
+  if (button.getToggleState()) { // selected: lit solid
+    fillNeon(g, shape, colour.withMultipliedAlpha(down ? 0.75f : 1.0f), hot ? 1.0f : 0.5f);
+    return;
   }
+  g.setColour(glass);
+  g.fillPath(shape);
+  if (hot || down) {
+    g.setColour(colour.withAlpha(down ? 0.3f : 0.14f));
+    g.fillPath(shape);
+  }
+  if (hot) // the frame splits into its colours, as on a misconverged tube
+    strokeFringes(g, shape, 1.0f, 1.2f);
+  strokeNeon(g, shape, colour.withMultipliedAlpha(hot ? 1.0f : enabled ? 0.72f : 0.6f), 1.0f,
+             hot ? 0.6f : 0.0f);
 }
 
 void HeadroomLookAndFeel::drawButtonText(juce::Graphics &g,
                                          juce::TextButton &button, bool highlighted,
                                          bool down) {
   using namespace colours;
-  const auto offset = down ? 1 : 0;
+  const bool enabled = button.isEnabled();
+  const bool on = button.getToggleState();
+  const bool hot = enabled && highlighted && !on;
+  const auto area = button.getLocalBounds().toFloat();
+
   if (isTab(button)) {
-    const bool selected = button.getToggleState();
-    g.setColour(selected ? text : highlighted ? textSoft : muted);
-    g.setFont(silk(14.0f, 0.11f));
-    g.drawFittedText(button.getButtonText().toUpperCase(),
-                     button.getLocalBounds().withTrimmedBottom(selected ? 3 : 0),
-                     juce::Justification::centred, 1);
+    const auto label = button.getButtonText().toUpperCase();
+    const auto font = tabFont();
+    if (hot) {
+      drawAberrated(g, label, font, area, juce::Justification::centred, colours::text, 1.0f);
+      return;
+    }
+    g.setColour(on ? black : textSoft);
+    g.setFont(font);
+    g.drawText(label, area, juce::Justification::centred, false);
     return;
   }
-  const bool primary = isPrimary(button) && !button.getToggleState();
-  const bool enabled = button.isEnabled();
-  g.setColour(!enabled ? mutedSoft
-              : primary || button.getToggleState() || highlighted ? text
-                                                                  : textSoft);
-  const auto area = button.getLocalBounds().toFloat().translated(0.0f, (float)offset);
-  if (drawSymbol(g, button.getButtonText(), area))
+
+  const auto colour = !enabled ? mutedSoft
+                      : on     ? black
+                      : isPrimary(button) ? accent()
+                      : hot               ? colours::text
+                                          : textSoft;
+  g.setColour(colour);
+  if (drawSymbol(g, button.getButtonText(), area.translated(0.0f, down ? 1.0f : 0.0f)))
     return;
   if (isProse(button)) {
-    g.setFont(sans(14.0f));
-    g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(10, 2),
+    g.setFont(body(12.5f));
+    g.drawFittedText(button.getButtonText(), button.getLocalBounds().reduced(12, 2),
                      juce::Justification::centred, 1);
     return;
   }
-  g.setFont(getTextButtonFont(button, button.getHeight()));
-  g.drawFittedText(button.getButtonText().toUpperCase(),
-                   button.getLocalBounds().reduced(5, 2).translated(0, offset),
-                   juce::Justification::centred, 1);
+  const auto font = getTextButtonFont(button, button.getHeight());
+  const auto label = button.getButtonText().toUpperCase();
+  const auto box = area.reduced(5.0f, 2.0f).translated(0.0f, down ? 1.0f : 0.0f);
+  if (hot) {
+    drawAberrated(g, textPath(label, font, box, juce::Justification::centred), colour, 1.0f);
+    return;
+  }
+  g.setFont(font);
+  g.drawFittedText(label, box.toNearestInt(), juce::Justification::centred, 1);
 }
 
 void HeadroomLookAndFeel::drawComboBox(juce::Graphics &g, int width, int height,
-                                       bool, int, int, int, int,
+                                       bool isButtonDown, int, int, int, int,
                                        juce::ComboBox &box) {
   using namespace colours;
-  const auto bounds = juce::Rectangle<int>(width, height).toFloat().reduced(0.0f, 0.5f);
-  const bool hot = box.isEnabled() && box.isMouseOver(true);
-  drawRecess(g, bounds, keyCorner);
+  const auto bounds = juce::Rectangle<int>(width, height).toFloat().reduced(0.5f);
+  const bool enabled = box.isEnabled();
+  const bool hot = enabled && box.isMouseOver(true);
+  const auto shape = bevelBox(bounds, juce::jmin(6.0f, bounds.getHeight() * 0.25f));
+  g.setColour(glass);
+  g.fillPath(shape);
   if (hot) {
-    g.setColour(white.withAlpha(0.03f));
-    g.fillRoundedRectangle(bounds.reduced(1.0f), keyCorner);
+    g.setColour(cyan.withAlpha(0.06f));
+    g.fillPath(shape);
   }
-  if (box.hasKeyboardFocus(true)) {
-    g.setColour(accent());
-    g.drawRoundedRectangle(bounds.reduced(0.5f), keyCorner, 1.0f);
-  }
+  g.setColour(box.hasKeyboardFocus(true) ? accent()
+              : !enabled                 ? mutedSoft
+                                         : cyan.withAlpha(hot ? 0.9f : 0.45f));
+  g.strokePath(shape, juce::PathStrokeType(1.0f));
 
-  const auto arrowZone =
-      juce::Rectangle<float>((float)width - 21.0f, 0.0f, 14.0f, (float)height);
+  // The arrow, in a cell of its own.
+  const auto cell = juce::Rectangle<float>((float)width - 22.0f, 0.0f, 22.0f, (float)height);
+  g.setColour(cyan.withAlpha(0.22f));
+  g.fillRect(cell.withWidth(1.0f).reduced(0.0f, 6.0f));
+  const auto c = cell.getCentre().translated(0.5f, 0.0f);
   juce::Path arrow;
-  arrow.startNewSubPath(arrowZone.getCentreX() - 3.5f,
-                        arrowZone.getCentreY() - 1.75f);
-  arrow.lineTo(arrowZone.getCentreX(), arrowZone.getCentreY() + 1.75f);
-  arrow.lineTo(arrowZone.getCentreX() + 3.5f, arrowZone.getCentreY() - 1.75f);
-  g.setColour(hot ? accent() : muted);
-  g.strokePath(arrow, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved,
-                                           juce::PathStrokeType::rounded));
+  arrow.addTriangle(c.x - 4.0f, c.y - 2.0f, c.x + 4.0f, c.y - 2.0f, c.x, c.y + 2.5f);
+  g.setColour(!enabled ? mutedSoft : hot || isButtonDown ? accent() : textSoft);
+  g.fillPath(arrow);
+}
+
+void HeadroomLookAndFeel::drawLabel(juce::Graphics &g, juce::Label &label) {
+  if (!(bool)label.getProperties()["headline"] || label.isBeingEdited()) {
+    LookAndFeel_V4::drawLabel(g, label);
+    return;
+  }
+  g.fillAll(label.findColour(juce::Label::backgroundColourId));
+  const auto font = getLabelFont(label);
+  const auto area = getLabelBorderSize(label).subtractedFrom(label.getLocalBounds()).toFloat();
+  const int lines = juce::jmax(1, (int)(area.getHeight() / font.getHeight()));
+  const auto letters = textPath(label.getText(), font, area, label.getJustificationType(),
+                                lines, label.getMinimumHorizontalScale());
+  if (letters.isEmpty())
+    return;
+  const auto colour = label.findColour(juce::Label::textColourId)
+                          .withMultipliedAlpha(label.isEnabled() ? 1.0f : 0.5f);
+  juce::DropShadow(colour.withMultipliedAlpha(0.45f),
+                   juce::jlimit(2, 12, juce::roundToInt(font.getHeight() * 0.3f)), {})
+      .drawForPath(g, letters);
+  drawAberrated(g, letters, colour, juce::jmax(1.0f, font.getHeight() * 0.06f));
 }
 
 void HeadroomLookAndFeel::drawPopupMenuBackground(juce::Graphics &g, int width,
                                                   int height) {
-  g.fillAll(colours::panel.darker(0.25f));
-  g.setColour(black);
+  using namespace colours;
+  g.fillAll(black);
+  g.setColour(cyan.withAlpha(0.65f));
   g.drawRect(0, 0, width, height, 1);
+  g.setColour(accent());
+  g.fillRect(1, 1, width - 2, 2); // a lit strip along its top
+}
+
+void HeadroomLookAndFeel::drawPopupMenuItem(
+    juce::Graphics &g, const juce::Rectangle<int> &area, bool isSeparator, bool isActive,
+    bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String &text,
+    const juce::String &shortcutKeyText, const juce::Drawable *icon,
+    const juce::Colour *textColour) {
+  using namespace colours;
+  if (isSeparator) {
+    const auto r = area.reduced(10, 0);
+    g.setColour(cyan.withAlpha(0.25f));
+    g.fillRect(r.withY(r.getCentreY()).withHeight(1));
+    return;
+  }
+  auto r = area.reduced(1);
+  auto colour = textColour != nullptr ? *textColour : findColour(juce::PopupMenu::textColourId);
+  if (isHighlighted && isActive) {
+    g.setColour(findColour(juce::PopupMenu::highlightedBackgroundColourId));
+    g.fillRect(r);
+    g.setColour(accent());
+    g.fillRect(r.withWidth(3));
+    colour = findColour(juce::PopupMenu::highlightedTextColourId);
+  } else if (!isActive) {
+    colour = colour.withMultipliedAlpha(0.45f);
+  }
+
+  r.removeFromLeft(8);
+  const auto mark = r.removeFromLeft(14).toFloat();
+  if (icon != nullptr)
+    icon->drawWithin(g, mark,
+                     juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize,
+                     1.0f);
+  else if (isTicked) {
+    g.setColour(accent());
+    g.fillRect(juce::Rectangle<float>(6.0f, 6.0f).withCentre(mark.getCentre()));
+  }
+  r.removeFromRight(8);
+  g.setColour(colour);
+  if (hasSubMenu) {
+    const auto arrow = r.removeFromRight(8).toFloat();
+    juce::Path p;
+    p.addTriangle(arrow.getX(), arrow.getCentreY() - 4.0f, arrow.getX(),
+                  arrow.getCentreY() + 4.0f, arrow.getRight(), arrow.getCentreY());
+    g.fillPath(p);
+  }
+
+  auto font = getPopupMenuFont();
+  const float maxHeight = (float)r.getHeight() / 1.3f;
+  if (font.getHeight() > maxHeight)
+    font = font.withHeight(maxHeight);
+  g.setFont(font);
+  if (shortcutKeyText.isNotEmpty()) {
+    g.setColour(colour.withMultipliedAlpha(0.6f));
+    g.drawText(shortcutKeyText, r, juce::Justification::centredRight, true);
+    g.setColour(colour);
+  }
+  g.drawFittedText(text, r, juce::Justification::centredLeft, 1);
 }
 
 void HeadroomLookAndFeel::drawCallOutBoxBackground(juce::CallOutBox &,
                                                    juce::Graphics &g,
                                                    const juce::Path &path,
                                                    juce::Image &) {
-  juce::DropShadow(black.withAlpha(0.7f), 18, {0, 5}).drawForPath(g, path);
+  juce::DropShadow(juce::Colours::black.withAlpha(0.85f), 16, {0, 4}).drawForPath(g, path);
   g.setColour(colours::panel);
   g.fillPath(path);
-  g.setColour(black);
-  g.strokePath(path, juce::PathStrokeType(1.0f));
+  strokeNeon(g, path, colours::cyan.withAlpha(0.85f), 1.0f, 0.6f);
+}
+
+void HeadroomLookAndFeel::drawAlertBox(juce::Graphics &g, juce::AlertWindow &alert,
+                                       const juce::Rectangle<int> &,
+                                       juce::TextLayout &textLayout) {
+  using namespace colours;
+  const auto bounds = alert.getLocalBounds();
+  g.fillAll(alert.findColour(juce::AlertWindow::backgroundColourId));
+  drawStripes(g, bounds.toFloat().withHeight(5.0f), accent().withAlpha(0.75f), 9.0f, 4.0f);
+  g.setColour(cyan.withAlpha(0.75f));
+  g.drawRect(bounds, 1);
+
+  int iconSpace = 0;
+  if (const auto type = alert.getAlertType(); type != juce::MessageBoxIconType::NoIcon) {
+    // A sign in wireframe: a triangle to warn, a square otherwise.
+    const auto icon = juce::Rectangle<float>(18.0f, 28.0f, 46.0f, 40.0f);
+    const bool warning = type == juce::MessageBoxIconType::WarningIcon;
+    juce::Path sign;
+    if (warning)
+      sign.addTriangle(icon.getCentreX(), icon.getY(), icon.getRight(), icon.getBottom(),
+                       icon.getX(), icon.getBottom());
+    else
+      sign.addRectangle(icon.withSizeKeepingCentre(icon.getHeight(), icon.getHeight()));
+    const auto colour = warning ? yellow : cyan;
+    strokeNeon(g, sign, colour, 1.5f, 0.8f);
+    g.setColour(colour);
+    g.setFont(headline(17.0f));
+    g.drawText(warning ? "!" : type == juce::MessageBoxIconType::InfoIcon ? "i" : "?",
+               icon.withTrimmedTop(warning ? 12.0f : 0.0f), juce::Justification::centred,
+               false);
+    iconSpace = 80;
+  }
+  textLayout.draw(g, juce::Rectangle<int>(bounds.getX() + iconSpace, 30, bounds.getWidth(),
+                                          bounds.getHeight() - getAlertWindowButtonHeight() - 20)
+                         .toFloat());
+}
+
+void HeadroomLookAndFeel::drawTextEditorOutline(juce::Graphics &g, int width, int height,
+                                                juce::TextEditor &editor) {
+  if (dynamic_cast<juce::AlertWindow *>(editor.getParentComponent()) != nullptr ||
+      !editor.isEnabled())
+    return;
+  const auto bounds = juce::Rectangle<int>(width, height).toFloat();
+  if (editor.hasKeyboardFocus(true) && !editor.isReadOnly()) {
+    const auto colour = editor.findColour(juce::TextEditor::focusedOutlineColourId);
+    g.setColour(colour.withMultipliedAlpha(0.22f));
+    g.drawRect(bounds.reduced(1.0f), 2.0f); // its glow, inwards
+    g.setColour(colour);
+    g.drawRect(bounds, 1.0f);
+    return;
+  }
+  g.setColour(editor.findColour(juce::TextEditor::outlineColourId));
+  g.drawRect(bounds, 1.0f);
+}
+
+void HeadroomLookAndFeel::drawScrollbar(juce::Graphics &g, juce::ScrollBar &bar, int x, int y,
+                                        int width, int height, bool vertical,
+                                        int thumbStart, int thumbSize, bool isMouseOver,
+                                        bool isMouseDown) {
+  using namespace colours;
+  const juce::Rectangle<float> track((float)x, (float)y, (float)width, (float)height);
+  constexpr float thickness = 3.0f;
+  g.setColour(cyan.withAlpha(0.12f));
+  g.fillRect(vertical ? track.withSizeKeepingCentre(1.0f, track.getHeight())
+                      : track.withSizeKeepingCentre(track.getWidth(), 1.0f));
+  if (thumbSize <= 0)
+    return;
+  const auto thumb =
+      vertical ? juce::Rectangle<float>(track.getX(), (float)thumbStart, track.getWidth(),
+                                        (float)thumbSize)
+                     .withSizeKeepingCentre(thickness, (float)thumbSize)
+               : juce::Rectangle<float>((float)thumbStart, track.getY(), (float)thumbSize,
+                                        track.getHeight())
+                     .withSizeKeepingCentre((float)thumbSize, thickness);
+  g.setColour(isMouseOver || isMouseDown ? accent() : bar.findColour(juce::ScrollBar::thumbColourId));
+  g.fillRect(thumb);
 }
 
 void HeadroomLookAndFeel::drawCornerResizer(juce::Graphics &g, int w, int h,
                                             bool isMouseOver,
                                             bool isMouseDragging) {
   g.setColour(isMouseDragging ? colours::accent()
-              : isMouseOver   ? colours::muted
+              : isMouseOver   ? colours::cyan
                               : colours::mutedSoft);
   for (float i = 0.3f; i < 1.0f; i += 0.3f)
     g.drawLine((float)w * i, (float)h, (float)w, (float)h * i, 1.0f);
@@ -563,10 +693,12 @@ void HeadroomLookAndFeel::drawCornerResizer(juce::Graphics &g, int w, int h,
 void HeadroomLookAndFeel::drawTooltip(juce::Graphics &g, const juce::String &text,
                                       int width, int height) {
   const auto bounds = juce::Rectangle<int>(width, height).toFloat();
-  g.fillAll(colours::panel.darker(0.25f));
-  g.setColour(black);
+  g.fillAll(colours::black);
+  g.setColour(colours::cyan.withAlpha(0.6f));
   g.drawRect(bounds, 1.0f);
-  layoutTooltip(text, colours::text).draw(g, bounds.reduced(10.0f, 6.0f));
+  g.setColour(colours::accent());
+  g.fillRect(bounds.withWidth(2.0f));
+  layoutTooltip(text, colours::text).draw(g, bounds.reduced(10.0f, 6.0f).withTrimmedLeft(2.0f));
 }
 
 juce::Rectangle<int>
@@ -574,7 +706,7 @@ HeadroomLookAndFeel::getTooltipBounds(const juce::String &text,
                                       juce::Point<int> screenPos,
                                       juce::Rectangle<int> parentArea) {
   const auto layout = layoutTooltip(text, colours::text);
-  const int w = (int)std::ceil(layout.getWidth()) + 20;
+  const int w = (int)std::ceil(layout.getWidth()) + 22;
   const int h = (int)std::ceil(layout.getHeight()) + 12;
   return juce::Rectangle<int>(screenPos.x > parentArea.getCentreX()
                                   ? screenPos.x - (w + 12)
@@ -587,38 +719,36 @@ HeadroomLookAndFeel::getTooltipBounds(const juce::String &text,
 }
 
 juce::Font HeadroomLookAndFeel::getTextButtonFont(juce::TextButton &, int) {
-  return silk(12.5f, 0.08f);
+  return caps(10.0f, 0.12f);
 }
 
 juce::Font HeadroomLookAndFeel::getComboBoxFont(juce::ComboBox &) {
-  return readout(14.0f);
+  return readout(19.0f);
 }
 
-juce::Font HeadroomLookAndFeel::getPopupMenuFont() { return sans(14.5f, true); }
+juce::Font HeadroomLookAndFeel::getPopupMenuFont() { return readout(19.0f); }
 
 juce::Font HeadroomLookAndFeel::getLabelFont(juce::Label &label) {
   return label.getFont();
 }
 
-juce::Font HeadroomLookAndFeel::getAlertWindowTitleFont() {
-  return display(22.0f);
-}
+juce::Font HeadroomLookAndFeel::getAlertWindowTitleFont() { return headline(15.0f); }
 
-juce::Font HeadroomLookAndFeel::getAlertWindowMessageFont() { return sans(14.5f); }
+juce::Font HeadroomLookAndFeel::getAlertWindowMessageFont() { return body(13.0f); }
 
-juce::Font HeadroomLookAndFeel::getAlertWindowFont() { return silk(12.5f, 0.08f); }
+juce::Font HeadroomLookAndFeel::getAlertWindowFont() { return caps(10.0f, 0.12f); }
 
 juce::Label *HeadroomLookAndFeel::createSliderTextBox(juce::Slider &slider) {
   auto *label = LookAndFeel_V4::createSliderTextBox(slider);
   const bool compact = slider.getProperties()["compact"];
-  label->setFont(readout(compact ? 11.0f : 14.0f));
+  label->setFont(readout(compact ? 15.0f : 19.0f));
   label->setColour(juce::Label::textColourId,
                    slider.findColour(juce::Slider::textBoxTextColourId));
   label->setColour(juce::Label::outlineColourId,
                    juce::Colours::transparentBlack);
   label->setColour(juce::Label::backgroundColourId,
                    juce::Colours::transparentBlack);
-  // Typing happens in place: the same text in the same spot, on a tint, or on
+  // Typing happens in place: the same text in the same spot, on a field, or on
   // the bar a bar slider already draws. JUCE's default fill is the transparent
   // colour made opaque.
   label->setColour(juce::Label::textWhenEditingColourId, colours::text);

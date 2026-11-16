@@ -21,9 +21,10 @@ they combine the components below, and the strongest terms apply to the combinat
   **GPL-3.0**. A model trained on that data is a derived work in the cautious reading; GPL-3.0
   is compatible with distributing the plugin under AGPLv3. If you want different terms,
   replace it with a capture of your own (`training/README.md`).
-- `resources/fonts/`: [Barlow](https://github.com/jpt/barlow),
-  [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono) and
-  [New Rocker](https://fonts.google.com/specimen/New+Rocker), embedded for the editor UI. All
+- `resources/fonts/`: [Michroma](https://fonts.google.com/specimen/Michroma),
+  [Orbitron](https://github.com/theleagueof/orbitron) (the authors' static Bold and Black),
+  [VT323](https://fonts.google.com/specimen/VT323) and
+  [IBM Plex Mono](https://github.com/IBM/plex), unmodified, embedded for the editor UI. All
   are under the **SIL Open Font License 1.1** (licence texts alongside the fonts), which allows
   bundling them in software of any licence.
 - `resources/brand/`: the TONE3000 logo and T3K mark, unaltered, from TONE3000's published

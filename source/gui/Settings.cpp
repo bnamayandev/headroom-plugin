@@ -5,30 +5,50 @@
 
 namespace headroom::gui {
 namespace {
-constexpr auto accentHueKey = "accentHue";
+constexpr auto neonKey = "neon";
 constexpr auto normaliseVolumeKey = "normaliseVolume";
+
+juce::String nameOf(Neon neon) {
+  switch (neon) {
+  case Neon::yellow:
+    return "yellow";
+  case Neon::cyan:
+    return "cyan";
+  case Neon::magenta:
+    break;
+  }
+  return "magenta";
+}
+
+Neon neonNamed(const juce::String &name) {
+  for (const auto neon : SettingsPanel::neons)
+    if (name == nameOf(neon))
+      return neon;
+  return colours::defaultNeon;
+}
 
 juce::PropertiesFile::Options fileOptions() {
   juce::PropertiesFile::Options options;
   options.storageFormat = juce::PropertiesFile::storeAsXML;
-  options.millisecondsBeforeSaving = 500; // a hue drag saves once, at the end
+  options.millisecondsBeforeSaving = 500;
   return options;
 }
 } // namespace
 
 Settings::Settings() : file(getFile(), fileOptions()) {
-  colours::setAccentHue((float)file.getDoubleValue(
-      accentHueKey, (double)colours::defaultAccentHue));
+  // The free hue the editor used to take, "accentHue", is left alone: the
+  // palette has only these neons in it.
+  colours::setNeon(neonNamed(file.getValue(neonKey)));
 }
 
 juce::File Settings::getFile() {
   return getDataDirectory().getChildFile("settings.xml");
 }
 
-void Settings::setAccentHue(float hue) {
-  colours::setAccentHue(hue);
+void Settings::setNeon(Neon neon) {
+  colours::setNeon(neon);
   getFile().getParentDirectory().createDirectory();
-  file.setValue(accentHueKey, (double)colours::getAccentHue());
+  file.setValue(neonKey, nameOf(neon));
   sendChangeMessage();
 }
 
@@ -118,30 +138,27 @@ void SettingsPanel::resized() {
   normaliseButton.setBounds(b.removeFromTop(26));
   b.removeFromTop(20);
   caption = b.removeFromTop(16);
-  b.removeFromTop(14);
-  swatchRow = b.removeFromTop(24);
-  b.removeFromTop(18);
-  hueStrip = b.removeFromTop(10);
+  b.removeFromTop(10);
+  swatchRow = b.removeFromTop(30);
 }
 
 juce::Rectangle<float> SettingsPanel::swatch(size_t index) const {
-  const float step = (float)swatchRow.getWidth() / (float)swatchHues.size();
-  return juce::Rectangle<float>(20.0f, 20.0f).withCentre(
-      {(float)swatchRow.getX() + step * ((float)index + 0.5f),
-       (float)swatchRow.getCentreY()});
+  constexpr float gap = 8.0f;
+  const float width = ((float)swatchRow.getWidth() - gap * (float)(neons.size() - 1)) /
+                      (float)neons.size();
+  return swatchRow.toFloat()
+      .withX((float)swatchRow.getX() + (width + gap) * (float)index)
+      .withWidth(width);
 }
 
 void SettingsPanel::paint(juce::Graphics &g) {
   using namespace colours;
-  const float hue = getAccentHue();
-
-  g.setFont(gui::caption());
-  g.setColour(muted);
-  g.setColour(line);
+  g.setColour(lineSoft);
   if (hasAppSection)
     g.fillRect(agentCaption.withY(agentCaption.getY() - 10).withHeight(1));
   g.fillRect(levelsCaption.withY(levelsCaption.getY() - 10).withHeight(1));
   g.fillRect(caption.withY(caption.getY() - 10).withHeight(1));
+  g.setFont(gui::caption());
   g.setColour(muted);
   if (hasAppSection) {
     g.drawText("AUDIO", audioCaption, juce::Justification::centredLeft);
@@ -149,68 +166,39 @@ void SettingsPanel::paint(juce::Graphics &g) {
   }
   g.drawText("TONE AGENT", agentCaption, juce::Justification::centredLeft);
   g.drawText("LEVELS", levelsCaption, juce::Justification::centredLeft);
-  g.drawText("ACCENT", caption, juce::Justification::centredLeft);
-  g.setFont(readout(13.0f));
-  g.setColour(textSoft);
-  g.drawText(juce::String(juce::roundToInt(hue * 360.0f) % 360) +
-                 juce::String::charToString(0x00b0),
-             caption, juce::Justification::centredRight);
-
-  for (size_t i = 0; i < swatchHues.size(); ++i) {
-    const auto r = swatch(i);
-    const float distance = std::abs(swatchHues[i] - hue * 360.0f);
-    if (juce::jmin(distance, 360.0f - distance) < 0.5f) {
-      g.setColour(text);
-      g.drawEllipse(r.expanded(3.5f), 1.25f);
-    }
-    g.setColour(accentAt(swatchHues[i] / 360.0f));
-    g.fillEllipse(r);
-  }
-
-  // The whole wheel at the accent's saturation and lightness.
-  const auto strip = hueStrip.toFloat();
-  juce::ColourGradient wheel(accentAt(0.0f), strip.getX(), 0.0f,
-                             accentAt(0.0f), strip.getRight(), 0.0f, false);
-  for (int i = 1; i < 12; ++i)
-    wheel.addColour(i / 12.0, accentAt((float)i / 12.0f));
-  g.setGradientFill(wheel);
-  g.fillRoundedRectangle(strip, strip.getHeight() * 0.5f);
-
-  const auto marker =
-      juce::Rectangle<float>(6.0f, strip.getHeight() + 8.0f)
-          .withCentre({strip.getX() + hue * strip.getWidth(), strip.getCentreY()});
+  g.drawText("NEON", caption, juce::Justification::centredLeft);
   g.setColour(accent());
-  g.fillRoundedRectangle(marker, 3.0f);
-  g.setColour(text);
-  g.drawRoundedRectangle(marker, 3.0f, 1.25f);
+  g.drawText(nameOf(getNeon()).toUpperCase(), caption, juce::Justification::centredRight);
+
+  // A key per neon: the chosen one lit solid, framed in white.
+  for (size_t i = 0; i < neons.size(); ++i) {
+    const auto shape = bevelBox(swatch(i).reduced(0.5f), 6.0f);
+    const auto colour = neon(neons[i]);
+    if (getNeon() == neons[i]) {
+      fillNeon(g, shape, colour, 0.9f);
+      g.setColour(colours::text);
+      g.strokePath(shape, juce::PathStrokeType(1.5f));
+    } else {
+      g.setColour(colour.withAlpha(0.22f));
+      g.fillPath(shape);
+      g.setColour(colour.withAlpha(0.6f));
+      g.strokePath(shape, juce::PathStrokeType(1.0f));
+    }
+  }
 }
 
 void SettingsPanel::mouseDown(const juce::MouseEvent &e) {
-  draggingHue = hueStrip.expanded(4, 8).contains(e.getPosition());
-  if (draggingHue) {
-    mouseDrag(e);
-    return;
-  }
-  for (size_t i = 0; i < swatchHues.size(); ++i)
-    if (swatch(i).expanded(3.0f).contains(e.position)) {
-      settings->setAccentHue(swatchHues[i] / 360.0f);
+  for (size_t i = 0; i < neons.size(); ++i)
+    if (swatch(i).contains(e.position)) {
+      settings->setNeon(neons[i]);
       return;
     }
 }
 
-void SettingsPanel::mouseDrag(const juce::MouseEvent &e) {
-  if (!draggingHue)
-    return;
-  const auto strip = hueStrip.toFloat();
-  // Stop just short of 1, which would wrap round to the strip's left end.
-  settings->setAccentHue(juce::jlimit(
-      0.0f, 0.999f, (e.position.x - strip.getX()) / strip.getWidth()));
-}
-
 void SettingsPanel::mouseMove(const juce::MouseEvent &e) {
-  bool hot = hueStrip.expanded(4, 8).contains(e.getPosition());
-  for (size_t i = 0; i < swatchHues.size() && !hot; ++i)
-    hot = swatch(i).expanded(3.0f).contains(e.position);
+  bool hot = false;
+  for (size_t i = 0; i < neons.size() && !hot; ++i)
+    hot = swatch(i).contains(e.position);
   setMouseCursor(hot ? juce::MouseCursor::PointingHandCursor
                      : juce::MouseCursor::NormalCursor);
 }

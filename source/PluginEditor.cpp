@@ -4,8 +4,16 @@
 
 namespace headroom {
 namespace {
-// The wordmark is long: at this height the header still has room for everything else.
-constexpr float logoHeight = 44.0f;
+// The wordmark is wide: at this height the header still has room for everything else.
+constexpr float logoHeight = 36.0f;
+// Where the logo sits, and how far past it its glow and its tearing reach.
+const juce::Point<float> logoAt{18.0f, 13.0f};
+constexpr int logoMargin = 14;
+// How fast the stripes under the header scroll, in pixels a second; and how
+// often the logo's picture tears, and for how long, in seconds. The clock wraps
+// at a whole number of both.
+constexpr float stripeSpeed = 18.0f, glitchEvery = 7.0f, glitchFor = 0.27f,
+                clockWrap = 500.0f * glitchEvery;
 
 void styleLabel(juce::Label &label, const juce::Font &font,
                 juce::Colour colour) {
@@ -88,11 +96,12 @@ HeadroomEditor::HeadroomEditor(HeadroomProcessor &p)
   gateButton.setTooltip("Noise gate before the amp");
 
   // Amp
-  styleLabel(modelName, gui::display(36.0f), gui::colours::text);
-  styleLabel(modelDetails, gui::sans(14.0f), gui::colours::textSoft);
+  styleLabel(modelName, gui::headline(16.0f), gui::colours::text);
+  gui::setHeadline(modelName);
+  styleLabel(modelDetails, gui::body(12.0f), gui::colours::textSoft);
   modelDetails.setJustificationType(juce::Justification::topLeft);
   for (auto *c : std::initializer_list<juce::Component *>{
-           &tubes, &modelName, &modelDetails, &loadModelButton,
+           &cube, &modelName, &modelDetails, &loadModelButton,
            &builtinModelButton, &unloadModelButton})
     ampPage.addAndMakeVisible(c);
   loadModelButton.onClick = [this] { chooseModelFile(); };
@@ -102,8 +111,9 @@ HeadroomEditor::HeadroomEditor(HeadroomProcessor &p)
   unloadModelButton.setTooltip("Play without a model: the amp passes clean");
 
   // Cab
-  styleLabel(irName, gui::display(24.0f), gui::colours::text);
-  styleLabel(irDetails, gui::sans(13.0f), gui::colours::textSoft);
+  styleLabel(irName, gui::headline(12.0f), gui::colours::text);
+  gui::setHeadline(irName);
+  styleLabel(irDetails, gui::body(11.5f), gui::colours::textSoft);
   irDetails.setJustificationType(juce::Justification::topLeft);
   for (auto *c : std::initializer_list<juce::Component *>{
            &speaker, &irName, &irDetails, &loadIrButton, &builtinIrButton,
@@ -145,6 +155,7 @@ HeadroomEditor::HeadroomEditor(HeadroomProcessor &p)
   tapButton.setTooltip(
       "Tap the tempo; each tap also restarts the bar on the beat");
   for (auto *slider : {&bpmSlider, &metronomeLevelSlider}) {
+    slider->setColour(juce::Slider::textBoxTextColourId, gui::colours::text);
     slider->setSliderSnapsToMousePosition(false);
     gui::ignoreTextWithoutNumber(*slider);
     canvas.addAndMakeVisible(slider);
@@ -162,7 +173,7 @@ HeadroomEditor::HeadroomEditor(HeadroomProcessor &p)
   }
   transposeDown.setTooltip("Transpose down a semitone");
   transposeUp.setTooltip("Transpose up a semitone");
-  styleLabel(transposeLabel, gui::readout(14.0f), gui::colours::textSoft);
+  styleLabel(transposeLabel, gui::readout(19.0f), gui::colours::textSoft);
   transposeLabel.setJustificationType(juce::Justification::centred);
   transposeLabel.setTooltip(
       "Transposer: shifts everything you play by semitones, e.g. -1 for "
@@ -183,7 +194,7 @@ HeadroomEditor::HeadroomEditor(HeadroomProcessor &p)
 
   // Footer: stats
   for (auto *l : {&cpuLabel, &latencyLabel}) {
-    styleLabel(*l, gui::readout(12.0f), gui::colours::textSoft);
+    styleLabel(*l, gui::readout(16.0f), gui::colours::textSoft);
     l->setJustificationType(juce::Justification::centredRight);
     canvas.addAndMakeVisible(l);
   }
@@ -194,8 +205,8 @@ HeadroomEditor::HeadroomEditor(HeadroomProcessor &p)
   audioProcessor.getModels().addChangeListener(this);
   settings->addChangeListener(this);
   refreshModelStatus();
-  refreshAmpHardware(0.0f);
-  tubes.snapTo(modelLive, 0.0f);
+  refreshAmpDisplays(0.0f);
+  cube.snapTo(modelLive, 0.0f);
   refreshIrStatus();
   refreshStats();
   refreshMetronome();
@@ -242,24 +253,69 @@ void HeadroomEditor::resized() {
 }
 
 void HeadroomEditor::paintCanvas(juce::Graphics &g) {
+  using namespace gui::colours;
   fixedParts.draw(g, canvas.getLocalBounds(), ampPage.isVisible() ? 1 : 0,
                   [this](juce::Graphics &c) { paintFixedParts(c); });
+  paintLogo(g);
+  // Under the header, stripes scrolling along a band, like a station ident's.
+  gui::drawStripes(g, stripesBand.toFloat(), blue.withAlpha(0.9f), 14.0f, 6.0f,
+                   animationTime * stripeSpeed);
   paintBeatLights(g);
   if (!ampPage.isVisible())
     return;
 
-  // The gate's activity light, and the amp's pilot light.
+  // The gate's activity light, and whether the amp's live.
   const bool gateEnabled =
       audioProcessor.getState().getRawParameterValue(params::gateOn)->load() >= 0.5f;
-  gui::drawLed(g, gateLed, gateEnabled && audioProcessor.isGateOpen(),
-               gui::colours::accent());
-  gui::drawLed(g, liveLed, modelLive, gui::colours::accent());
-  g.setFont(gui::caption());
-  g.setColour(modelLive ? gui::colours::text : gui::colours::muted);
-  g.drawText(modelLive ? "LIVE" : "STANDBY",
-             juce::Rectangle<float>(liveLed.getX() - 69.0f, liveLed.getY() - 4.0f, 60.0f,
-                                    liveLed.getHeight() + 8.0f),
-             juce::Justification::centredRight, false);
+  gui::drawLed(g, gateLed, gateEnabled && audioProcessor.isGateOpen(), accent());
+  paintLiveBadge(g);
+}
+
+void HeadroomEditor::paintLiveBadge(juce::Graphics &g) {
+  using namespace gui::colours;
+  const auto badge = gui::bevelBox(liveBadge, 4.0f);
+  if (modelLive) {
+    gui::fillNeon(g, badge, accent(), 0.9f);
+    g.setColour(black);
+  } else {
+    g.setColour(mutedSoft);
+    g.strokePath(badge, juce::PathStrokeType(1.0f));
+  }
+  g.setFont(gui::caps(9.0f, 0.24f));
+  g.drawText(modelLive ? "LIVE" : "STANDBY", liveBadge, juce::Justification::centred, false);
+}
+
+void HeadroomEditor::paintLogo(juce::Graphics &g) {
+  const auto at = logoArea.getPosition().toFloat();
+  const auto paint = [](juce::Graphics &c) {
+    gui::drawLogo(c, {(float)logoMargin, logoAt.y}, logoHeight);
+  };
+  if (!isGlitching()) {
+    logoCache.draw(g, logoArea, 0, paint);
+    return;
+  }
+  // The picture tears: bands of it knocked sideways, differently every frame.
+  juce::Random random((juce::int64)(animationTime * 30.0f));
+  constexpr int bands = 6;
+  for (int i = 0; i < bands; ++i) {
+    const int top = logoArea.getY() + logoArea.getHeight() * i / bands;
+    const int bottom = logoArea.getY() + logoArea.getHeight() * (i + 1) / bands;
+    const juce::Graphics::ScopedSaveState save(g);
+    g.reduceClipRegion(logoArea.withTop(top).withBottom(bottom));
+    const float shift = random.nextFloat() < 0.45f ? 0.0f : (random.nextFloat() - 0.5f) * 18.0f;
+    logoCache.draw(g, at.translated(shift, 0.0f), logoArea.getWidth(), logoArea.getHeight(),
+                   0, paint);
+  }
+}
+
+bool HeadroomEditor::isGlitching() const {
+  return std::fmod(animationTime, glitchEvery) > glitchEvery - glitchFor;
+}
+
+void HeadroomEditor::paintGlass(juce::Graphics &g) {
+  glassCache.draw(g, canvas.getLocalBounds(), 0, [](juce::Graphics &c) {
+    gui::drawCrtGlass(c, juce::Rectangle<float>((float)designWidth, (float)designHeight));
+  });
 }
 
 void HeadroomEditor::paintFixedParts(juce::Graphics &g) {
@@ -267,16 +323,25 @@ void HeadroomEditor::paintFixedParts(juce::Graphics &g) {
   const juce::Rectangle<int> design(designWidth, designHeight);
   gui::drawChassis(g, design);
 
-  // Vinyl along the top, and a shadow from it across the rack.
-  gui::drawVinyl(g, design.withHeight(headerHeight));
-  g.setGradientFill(juce::ColourGradient(juce::Colours::black.withAlpha(0.75f), 0.0f,
-                                         (float)headerHeight, juce::Colours::black.withAlpha(0.0f),
-                                         0.0f, (float)headerHeight + 14.0f, false));
-  g.fillRect(0, headerHeight, designWidth, 14);
-  g.setColour(juce::Colours::white.withAlpha(0.13f));
-  g.fillRect(0, headerHeight - 1, designWidth, 1);
-  gui::drawLogo(g, {18.0f, 10.0f}, logoHeight);
-  gui::drawRecess(g, tabTray.toFloat(), 4.0f);
+  // The header, black, ruled off with a lit line over the band of stripes.
+  g.setColour(black);
+  g.fillRect(design.withHeight(headerHeight));
+  g.setColour(black);
+  g.fillRect(stripesBand);
+  g.setColour(blue.withAlpha(0.25f));
+  g.fillRect(stripesBand);
+  juce::Path rule;
+  rule.startNewSubPath(0.0f, (float)headerHeight - 0.5f);
+  rule.lineTo((float)designWidth, (float)headerHeight - 0.5f);
+  gui::strokeNeon(g, rule, cyan.withAlpha(0.8f), 1.0f, 0.6f);
+  g.setColour(blue);
+  g.fillRect(stripesBand.withY(stripesBand.getBottom()).withHeight(1));
+
+  const auto tray = gui::bevelBox(tabTray.toFloat().reduced(0.5f), 7.0f);
+  g.setColour(glass);
+  g.fillPath(tray);
+  g.setColour(cyan.withAlpha(0.35f));
+  g.strokePath(tray, juce::PathStrokeType(1.0f));
 
   paintFooter(g);
   if (!ampPage.isVisible())
@@ -288,27 +353,12 @@ void HeadroomEditor::paintFixedParts(juce::Graphics &g) {
   gui::drawPanel(g, eqPanel, "EQ");
   gui::drawPanel(g, outputPanel, "Output");
 
-  // The amp's display: smoked glass with the tubes behind it.
-  const auto display = ampDisplay.toFloat();
-  gui::drawRecess(g, display, 4.0f);
-  {
-    const juce::Graphics::ScopedSaveState save(g);
-    g.reduceClipRegion(ampDisplay.reduced(1));
-    // The glass picks up a reflection across its top corner.
-    juce::Path reflection;
-    reflection.startNewSubPath(display.getX(), display.getY());
-    reflection.lineTo(display.getX() + display.getWidth() * 0.62f, display.getY());
-    reflection.lineTo(display.getX() + display.getWidth() * 0.38f, display.getBottom());
-    reflection.lineTo(display.getX(), display.getBottom());
-    reflection.closeSubPath();
-    g.setGradientFill(juce::ColourGradient(juce::Colours::white.withAlpha(0.045f),
-                                           display.getX(), display.getY(),
-                                           juce::Colours::white.withAlpha(0.0f),
-                                           display.getX() + display.getWidth() * 0.5f,
-                                           display.getBottom(), false));
-    g.fillPath(reflection);
-  }
-  g.setFont(gui::silk(12.0f, 0.15f));
+  // The amp's display: a screen with the cube at its left, ruled off from what's
+  // loaded.
+  gui::drawScreen(g, ampDisplay.toFloat());
+  g.setColour(blue.withAlpha(0.8f));
+  g.fillRect(cube.getRight(), ampDisplay.getY() + 1, 1, ampDisplay.getHeight() - 2);
+  g.setFont(gui::caps(9.5f, 0.24f));
   g.setColour(accent());
   g.drawText("NEURAL AMP MODEL", ampCaption, juce::Justification::centredLeft, false);
 }
@@ -317,36 +367,49 @@ void HeadroomEditor::layoutCanvas() {
   const juce::Rectangle<int> design(designWidth, designHeight);
 
   // Header: logo, tabs in their tray, presets.
+  const int logoWidth = juce::roundToInt(gui::logoWidth(logoHeight));
+  logoArea = juce::Rectangle<int>((int)logoAt.x - logoMargin, 0, logoWidth + 2 * logoMargin,
+                                  headerHeight);
+  stripesBand = juce::Rectangle<int>(0, headerHeight, designWidth, 5);
   auto header = design.withHeight(headerHeight).reduced(16, 0);
-  header.removeFromLeft(juce::roundToInt(gui::logoWidth(logoHeight)) + 2);
-  header.removeFromLeft(16);
-  tabTray = header.removeFromLeft(298).withSizeKeepingCentre(298, 38);
+  header.removeFromLeft(logoWidth + 2);
+  header.removeFromLeft(18);
   {
+    // Each tab as wide as its label, the pedals' wide enough for any count.
+    const auto width = [](const juce::String &label) {
+      return juce::roundToInt(juce::GlyphArrangement::getStringWidth(gui::tabFont(), label)) + 22;
+    };
+    const int amp = width("AMP"),
+              pedals = width("PEDALS " + juce::String::charToString(0x2022) + " 12"),
+              tuner = width("TUNER"), agent = width("AGENT");
+    const int trayWidth = amp + pedals + tuner + agent + 3 + 6;
+    tabTray = header.removeFromLeft(trayWidth).withSizeKeepingCentre(trayWidth, 38);
     auto tabs = tabTray.reduced(3);
-    ampTab.setBounds(tabs.removeFromLeft(58));
+    ampTab.setBounds(tabs.removeFromLeft(amp));
     tabs.removeFromLeft(1);
-    pedalsTab.setBounds(tabs.removeFromLeft(98));
+    pedalsTab.setBounds(tabs.removeFromLeft(pedals));
     tabs.removeFromLeft(1);
-    tunerTab.setBounds(tabs.removeFromLeft(67));
+    tunerTab.setBounds(tabs.removeFromLeft(tuner));
     tabs.removeFromLeft(1);
     agentTab.setBounds(tabs);
   }
-  header.removeFromLeft(16);
+  header.removeFromLeft(14);
   header = header.withSizeKeepingCentre(header.getWidth(), 32);
-  prevPreset.setBounds(header.removeFromLeft(28));
-  header.removeFromLeft(4);
-  presetBox.setBounds(header.removeFromLeft(isStandalone() ? 166 : 214));
-  header.removeFromLeft(4);
-  nextPreset.setBounds(header.removeFromLeft(28));
-  header.removeFromLeft(10);
-  savePreset.setBounds(header.removeFromLeft(58));
   if (isStandalone()) {
     closeButton.setBounds(header.removeFromRight(24));
     header.removeFromRight(2);
     minimiseButton.setBounds(header.removeFromRight(24));
     header.removeFromRight(8);
   }
-  settingsButton.setBounds(header.removeFromRight(78));
+  settingsButton.setBounds(header.removeFromRight(84));
+  header.removeFromRight(12);
+  prevPreset.setBounds(header.removeFromLeft(28));
+  header.removeFromLeft(4);
+  savePreset.setBounds(header.removeFromRight(58));
+  header.removeFromRight(10);
+  nextPreset.setBounds(header.removeFromRight(28));
+  header.removeFromRight(4);
+  presetBox.setBounds(header);
 
   // Footer: metronome on the left; transposer and stats on the right.
   {
@@ -357,26 +420,26 @@ void HeadroomEditor::layoutCanvas() {
       footer.removeFromLeft(gapAfter);
       return r;
     };
-    metronomeCaption = next(70, 8);
-    metronomeButton.setBounds(next(54, 6));
+    metronomeCaption = next(92, 6);
+    metronomeButton.setBounds(next(56, 6));
     bpmSlider.setBounds(next(84, 6));
-    tapButton.setBounds(next(44, 6));
+    tapButton.setBounds(next(46, 6));
     beatsBox.setBounds(next(62, 6));
     metronomeLevelSlider.setBounds(next(74, 12));
-    beatLeds = next(7 * 12, 0);
+    beatLeds = next(7 * 10, 0);
 
-    statsArea = footer.removeFromRight(176).withSizeKeepingCentre(176, 30);
+    statsArea = footer.removeFromRight(168).withSizeKeepingCentre(168, 30);
     auto stats = statsArea;
     cpuLabel.setBounds(stats.removeFromTop(15));
     latencyLabel.setBounds(stats);
-    footer.removeFromRight(20);
+    footer.removeFromRight(18);
     transposeUp.setBounds(footer.removeFromRight(28));
     footer.removeFromRight(4);
     transposeLabel.setBounds(footer.removeFromRight(52));
     footer.removeFromRight(4);
     transposeDown.setBounds(footer.removeFromRight(28));
     footer.removeFromRight(8);
-    transposeCaption = footer.removeFromRight(66);
+    transposeCaption = footer.removeFromRight(juce::jmin(84, footer.getWidth()));
   }
 
   ampPage.setBounds(design);
@@ -400,14 +463,15 @@ void HeadroomEditor::layoutCanvas() {
   bottom.removeFromLeft(10);
   eqPanel = bottom;
 
-  const auto titleLight = [](juce::Rectangle<int> panel, float size) {
-    return juce::Rectangle<float>(size, size).withCentre(
-        {(float)panel.getRight() - 30.0f, (float)panel.getY() + 17.5f});
+  // Indicators at the right of a panel's title row.
+  const auto titleRowCentre = [](juce::Rectangle<int> panel) {
+    return (float)panel.getY() + 17.5f;
   };
 
   // Input: two knobs side by side, gate switch, meter on the right.
   {
-    gateLed = titleLight(inputPanel, 8.0f);
+    gateLed = juce::Rectangle<float>(8.0f, 8.0f).withCentre(
+        {(float)inputPanel.getRight() - 30.0f, titleRowCentre(inputPanel)});
     auto b = inputPanel.reduced(14, 0).withTrimmedTop(34).withTrimmedBottom(18);
     inputMeter.setBounds(b.removeFromRight(12));
     b.removeFromRight(6);
@@ -417,36 +481,39 @@ void HeadroomEditor::layoutCanvas() {
     gateKnob.setBounds(knobs);
   }
 
-  // Amp: the display, with the tubes and what's loaded, and what to load.
+  // Amp: the display, with the cube and what's loaded, and what to load.
   {
-    liveLed = titleLight(ampPanel, 9.0f);
+    liveBadge = juce::Rectangle<float>(66.0f, 16.0f).withCentre(
+        {(float)ampPanel.getRight() - 22.0f - 33.0f, titleRowCentre(ampPanel)});
     auto b = ampPanel.reduced(16, 0).withTrimmedTop(34).withTrimmedBottom(16);
     auto buttons = b.removeFromBottom(30);
     b.removeFromBottom(10);
     ampDisplay = b;
-    auto d = ampDisplay.reduced(14, 10);
-    tubes.setBounds(d.removeFromLeft(156));
-    d.removeFromLeft(18);
+    auto d = ampDisplay.reduced(1);
+    cube.setBounds(d.removeFromLeft(176));
+    d.removeFromLeft(16);
+    d.removeFromRight(12);
+    d = d.reduced(0, 10);
     ampCaption = d.removeFromTop(18);
-    modelName.setBounds(d.removeFromTop(44));
+    modelName.setBounds(d.removeFromTop(50));
     d.removeFromTop(2);
     modelDetails.setBounds(d);
 
     loadModelButton.setBounds(buttons.removeFromLeft(112));
     buttons.removeFromLeft(6);
-    builtinModelButton.setBounds(buttons.removeFromLeft(84));
+    builtinModelButton.setBounds(buttons.removeFromLeft(88));
     buttons.removeFromLeft(6);
-    unloadModelButton.setBounds(buttons.removeFromLeft(74));
+    unloadModelButton.setBounds(buttons.removeFromLeft(80));
   }
 
   // Cab: the speaker, what's loaded, and how to change it.
   {
     auto b = cabPanel.reduced(14, 0).withTrimmedTop(34).withTrimmedBottom(18);
-    constexpr int cone = 146;
+    constexpr int cone = 140;
     speaker.setBounds(b.removeFromLeft(cone).withSizeKeepingCentre(cone, cone));
     b.removeFromLeft(14);
-    irName.setBounds(b.removeFromTop(30));
-    irDetails.setBounds(b.removeFromTop(52));
+    irName.setBounds(b.removeFromTop(38));
+    irDetails.setBounds(b.removeFromTop(48));
     auto switchRow = b.removeFromBottom(26);
     cabButton.setBounds(switchRow);
     b.removeFromBottom(10);
@@ -493,26 +560,24 @@ void HeadroomEditor::paintFooter(juce::Graphics &g) {
   using namespace gui::colours;
   const auto strip = juce::Rectangle<int>(designWidth, designHeight)
                          .withTop(designHeight - footerHeight);
-  gui::drawVinyl(g, strip);
-  g.setGradientFill(juce::ColourGradient(juce::Colours::black.withAlpha(0.0f), 0.0f,
-                                         (float)strip.getY() - 10.0f,
-                                         juce::Colours::black.withAlpha(0.6f), 0.0f,
-                                         (float)strip.getY(), false));
-  g.fillRect(0, strip.getY() - 10, designWidth, 10);
-  g.setColour(juce::Colours::white.withAlpha(0.13f));
-  g.fillRect(0, strip.getY(), designWidth, 1);
+  g.setColour(black);
+  g.fillRect(strip);
+  juce::Path rule;
+  rule.startNewSubPath(0.0f, (float)strip.getY() + 0.5f);
+  rule.lineTo((float)designWidth, (float)strip.getY() + 0.5f);
+  gui::strokeNeon(g, rule, cyan.withAlpha(0.8f), 1.0f, 0.6f);
 
-  gui::drawRecess(g, transposeLabel.getBounds().toFloat(), 3.0f);
-  gui::drawRecess(g, statsArea.toFloat().expanded(6.0f, 0.0f), 3.0f);
+  gui::drawScreen(g, transposeLabel.getBounds().toFloat());
+  gui::drawScreen(g, statsArea.toFloat().expanded(6.0f, 0.0f));
 
-  g.setFont(gui::caption());
+  g.setFont(gui::caps(9.5f, 0.14f));
   g.setColour(textSoft);
-  g.drawText("METRONOME", metronomeCaption, juce::Justification::centredLeft);
-  g.drawText("TRANSPOSE", transposeCaption, juce::Justification::centredRight);
+  g.drawText("METRONOME", metronomeCaption, juce::Justification::centredLeft, false);
+  g.drawText("TRANSPOSE", transposeCaption, juce::Justification::centredRight, false);
+  g.setFont(gui::caps(8.0f, 0.14f));
   g.setColour(muted);
   g.drawText("CPU", cpuLabel.getBounds(), juce::Justification::centredLeft);
-  g.drawText("LATENCY", latencyLabel.getBounds(),
-             juce::Justification::centredLeft);
+  g.drawText("LATENCY", latencyLabel.getBounds(), juce::Justification::centredLeft);
 }
 
 void HeadroomEditor::paintBeatLights(juce::Graphics &g) {
@@ -530,17 +595,26 @@ void HeadroomEditor::paintBeatLights(juce::Graphics &g) {
       juce::Time::getMillisecondCounterHiRes() - lastClickTime < 130.0;
   for (int i = 0; i < beats; ++i) {
     const auto led = juce::Rectangle<float>(7.0f, 7.0f).withCentre(
-        {(float)beatLeds.getX() + 5.5f + 12.0f * (float)i,
+        {(float)beatLeds.getX() + 5.0f + 10.0f * (float)i,
          (float)beatLeds.getCentreY()});
     if (i == current && flashing)
-      gui::drawLed(g, led, true, i == 0 ? accent() : text);
+      gui::drawLed(g, led, true, i == 0 ? accent() : gui::colours::text);
     else
-      gui::drawLed(g, led, false, i == current ? text : accent());
+      gui::drawLed(g, led, false, i == current ? gui::colours::text : accent());
   }
 }
 
 void HeadroomEditor::timerCallback() {
   constexpr float interval = 1.0f / 30.0f;
+  animationTime += interval;
+  if (animationTime >= clockWrap)
+    animationTime -= clockWrap;
+  canvas.repaint(stripesBand);
+  if (const bool glitching = isGlitching(); glitching || logoGlitched) {
+    logoGlitched = glitching;
+    canvas.repaint(logoArea);
+  }
+
   inputMeter.pushPeak(audioProcessor.takeInputPeak(), interval);
   const float outputPeak = audioProcessor.takeOutputPeak();
   outputMeter.pushPeak(outputPeak, interval);
@@ -551,7 +625,7 @@ void HeadroomEditor::timerCallback() {
     eqSpectrum.push(samples.data(), n);
   if (ampPage.isVisible()) {
     eqSpectrum.refresh(audioProcessor.getSampleRate(), interval);
-    refreshAmpHardware(outputPeak);
+    refreshAmpDisplays(outputPeak);
   }
 
   // Drained on every page, so the tuner never starts on stale samples.
@@ -587,10 +661,10 @@ void HeadroomEditor::timerCallback() {
     canvas.repaint(gateLed.expanded(16.0f).getSmallestIntegerContainer());
 }
 
-void HeadroomEditor::refreshAmpHardware(float outputPeak) {
-  // The tubes follow the signal over the top of a guitar's range.
+void HeadroomEditor::refreshAmpDisplays(float outputPeak) {
+  // The cube follows the signal over the top of a guitar's range.
   const auto db = juce::Decibels::gainToDecibels(outputPeak, -100.0f);
-  tubes.update(modelLive, juce::jmap(juce::jlimit(-42.0f, -3.0f, db), -42.0f, -3.0f, 0.0f, 1.0f));
+  cube.update(modelLive, juce::jmap(juce::jlimit(-42.0f, -3.0f, db), -42.0f, -3.0f, 0.0f, 1.0f));
   speaker.setActive(audioProcessor.getState().getRawParameterValue(params::cabOn)->load() >= 0.5f);
 
   std::array<float, Equaliser::numBands> bands;
@@ -621,7 +695,7 @@ void HeadroomEditor::refreshPedalsTab() {
   // The count keeps engaged pedals visible from the amp page.
   const int active = pedalBoard.getNumActive();
   pedalsTab.setButtonText(
-      active > 0 ? "pedals " + juce::String::charToString(0x00b7) + " " +
+      active > 0 ? "pedals " + juce::String::charToString(0x2022) + " " +
                        juce::String(active)
                  : juce::String("pedals"));
 }
@@ -695,7 +769,7 @@ void HeadroomEditor::applyAccent() {
 }
 
 void HeadroomEditor::applyPresetColour() {
-  presetBox.setColour(juce::ComboBox::textColourId, gui::colours::accent());
+  presetBox.setColour(juce::ComboBox::textColourId, gui::colours::yellow);
 }
 
 void HeadroomEditor::refreshModelStatus() {
@@ -739,13 +813,14 @@ void HeadroomEditor::refreshModelStatus() {
     break;
   }
   }
+  modelName.setText(modelName.getText().toUpperCase(), juce::dontSendNotification);
   modelDetails.setColour(juce::Label::textColourId,
-                         status.state == State::error ? gui::colours::accent()
+                         status.state == State::error ? gui::colours::yellow
                                                       : gui::colours::textSoft);
 }
 
 void HeadroomEditor::refreshIrStatus() {
-  irName.setText(audioProcessor.getCab().getDisplayName(),
+  irName.setText(audioProcessor.getCab().getDisplayName().toUpperCase(),
                  juce::dontSendNotification);
   const auto error = audioProcessor.getLastIrError();
   if (const auto source = audioProcessor.getCab().getSource();
@@ -759,7 +834,7 @@ void HeadroomEditor::refreshIrStatus() {
                               : juce::String("Zero-latency convolution; IR swaps crossfade"),
       juce::dontSendNotification);
   irDetails.setColour(juce::Label::textColourId, error.isNotEmpty()
-                                                     ? gui::colours::accent()
+                                                     ? gui::colours::yellow
                                                      : gui::colours::textSoft);
 }
 

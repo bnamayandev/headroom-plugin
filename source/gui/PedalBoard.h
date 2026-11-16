@@ -6,12 +6,13 @@
 #include <memory>
 
 namespace headroom::gui {
-/** One stomp box in its own paint: three knobs across the top, its name and a
-   drawing of what it does to a signal, then its light and footswitch. While
-   bypassed its paint goes dull and its light goes out. */
+/** One stomp box as a neon card: three knobs across the top, its name on a
+   plate and what it does to a signal on a little scope, then its light and
+   footswitch. Its neon says what kind of pedal it is; while it's on, the plate,
+   the scope and the frame light up in it. */
 class Pedal final : public juce::Component {
 public:
-  /** What's silkscreened on it, as a waveform or a response. */
+  /** What its scope shows, as a waveform or a response. */
   enum class Art {
     wah,
     compressor,
@@ -32,7 +33,8 @@ public:
     const char *onId;
     std::array<std::pair<const char *, const char *>, 3> knobs; // id, title
     const char *tooltip;
-    juce::uint32 paint;
+    juce::uint32 neon; // yellow for filters, dynamics and time; magenta for
+                       // drive; cyan for modulation
     Art art;
   };
 
@@ -44,16 +46,15 @@ public:
 
 private:
   void setOn(bool on);
-  void paintEnclosure(juce::Graphics &) const;
+  void paintCard(juce::Graphics &) const;
 
   Spec spec;
-  juce::Colour ink;
   std::array<std::unique_ptr<Knob>, 3> knobs;
   Footswitch footswitch;
   std::unique_ptr<juce::ParameterAttachment> onAttachment;
   juce::Rectangle<int> nameArea, artArea;
   juce::Rectangle<float> led;
-  PaintCache enclosure;
+  PaintCache card;
 };
 
 /** The pedal page: pedals in signal order, left to right, on a board in two

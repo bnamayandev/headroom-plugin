@@ -56,12 +56,11 @@ juce_add_binary_data(HeadroomData
     HEADER_NAME HeadroomBinaryData.h
     NAMESPACE HeadroomBinaryData
     SOURCES
-        resources/fonts/Barlow-Regular.ttf
-        resources/fonts/Barlow-Medium.ttf
-        resources/fonts/BarlowSemiCondensed-SemiBold.ttf
-        resources/fonts/BarlowCondensed-ExtraBoldItalic.ttf
-        resources/fonts/ShareTechMono-Regular.ttf
-        resources/fonts/NewRocker-Regular.ttf
+        resources/fonts/Michroma-Regular.ttf
+        resources/fonts/Orbitron-Bold.ttf
+        resources/fonts/Orbitron-Black.ttf
+        resources/fonts/VT323-Regular.ttf
+        resources/fonts/IBMPlexMono-Regular.ttf
         resources/irs/HeadroomCab4x12.wav
         resources/models/BlackstarHT1.nam
         resources/presets/factory_presets.xml
@@ -144,7 +143,7 @@ target_sources(Headroom PRIVATE
     source/StandaloneApp.cpp
     source/gui/AgentPage.cpp
     source/gui/HeadroomLookAndFeel.cpp
-    source/gui/Hardware.cpp
+    source/gui/Neon.cpp
     source/gui/KeysPanel.cpp
     source/gui/PedalBoard.cpp
     source/gui/Settings.cpp
@@ -189,7 +188,7 @@ if(HEADROOM_BUILD_TOOLS)
         source/StandaloneApp.cpp
         source/gui/AgentPage.cpp
         source/gui/HeadroomLookAndFeel.cpp
-        source/gui/Hardware.cpp
+        source/gui/Neon.cpp
         source/gui/KeysPanel.cpp
         source/gui/PedalBoard.cpp
         source/gui/Settings.cpp

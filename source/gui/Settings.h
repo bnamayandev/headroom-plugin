@@ -1,5 +1,7 @@
 #pragma once
 
+#include "HeadroomLookAndFeel.h"
+
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <array>
@@ -15,9 +17,9 @@ class Settings final : public juce::ChangeBroadcaster {
 public:
   Settings();
 
-  /** Applies the accent hue (0..1) to colours::accent(), saves it and tells
-      the open editors to repaint. */
-  void setAccentHue(float hue);
+  /** Makes this the neon colours::accent() gives, saves it and tells the
+      open editors to repaint. */
+  void setNeon(Neon);
 
   /** Whether every capture and IR plays at the same volume, as measured when it
       loads, rather than at the level it was made at. On unless turned off. */
@@ -30,9 +32,9 @@ private:
   juce::PropertiesFile file;
 };
 
-/** The settings popover: whether to normalise the volume, accent swatches,
-    and a hue strip for anything in between. In the standalone app, also the
-    audio device and saved states, which a host otherwise looks after. */
+/** The settings popover: the API keys, whether to normalise the volume, and
+    which neon what's live glows in. In the standalone app, also the audio
+    device and saved states, which a host otherwise looks after. */
 class SettingsPanel final : public juce::Component,
                             private juce::ChangeListener {
 public:
@@ -46,17 +48,14 @@ public:
                          std::optional<AppActions> = std::nullopt);
   ~SettingsPanel() override;
 
-  static constexpr int panelWidth = 300, panelHeight = 260,
+  static constexpr int panelWidth = 300, panelHeight = 222,
                        appSectionHeight = 138;
-  /** The swatch hues, in degrees; the first is the default. */
-  static constexpr std::array<float, 9> swatchHues{10.0f,  350.0f, 40.0f,
-                                                   95.0f,  150.0f, 185.0f,
-                                                   215.0f, 268.0f, 315.0f};
+  /** The neons on offer; the first is the default. */
+  static constexpr std::array<Neon, 3> neons{Neon::magenta, Neon::yellow, Neon::cyan};
 
   void paint(juce::Graphics &) override;
   void resized() override;
   void mouseDown(const juce::MouseEvent &) override;
-  void mouseDrag(const juce::MouseEvent &) override;
   void mouseMove(const juce::MouseEvent &) override;
 
 private:
@@ -73,8 +72,7 @@ private:
       audioButton{"audio/midi settings..."},
       saveButton{"save..."}, loadButton{"load..."}, resetButton{"reset"};
   juce::ToggleButton normaliseButton{"normalise volume"};
-  juce::Rectangle<int> audioCaption, stateCaption, agentCaption, levelsCaption, caption, swatchRow,
-      hueStrip;
-  bool draggingHue = false;
+  juce::Rectangle<int> audioCaption, stateCaption, agentCaption, levelsCaption, caption,
+      swatchRow;
 };
 } // namespace headroom::gui

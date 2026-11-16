@@ -16,77 +16,77 @@ const std::array<Pedal::Spec, 12> &pedalSpecs() {
        "After a Dunlop Cry Baby. Pedal is the rocker, heel to toe; Peak at noon "
        "is the stock pedal. Auto isn't on a real one: it opens the filter as you "
        "pick harder, for an envelope filter.",
-       0xff2c2d33, Pedal::Art::wah},
+       0xfff5ff3b, Pedal::Art::wah},
       {"compressor", p::compOn,
        {{{p::compSustain, "Sens"}, {p::compBlend, "Blend"},
          {p::compLevel, "Output"}}},
        "After an MXR Dyna Comp: its Sensitivity and Output. Blend isn't on the "
        "original; all the way up is the original.",
-       0xff0f4a57, Pedal::Art::compressor},
+       0xfff5ff3b, Pedal::Art::compressor},
       {"fuzz", p::fuzzOn,
        {{{p::fuzzAmount, "Sustain"}, {p::fuzzTone, "Tone"},
          {p::fuzzLevel, "Volume"}}},
        "An EHX Big Muff Pi circuit, its knobs where a real one's are. Tone scoops "
        "the mids at noon, dark and wooly to the left, cutting to the right.",
-       0xff4a1f4d, Pedal::Art::fuzz},
+       0xffff2bd6, Pedal::Art::fuzz},
       {"overdrive", p::odOn,
        {{{p::odDrive, "Drive"}, {p::odTone, "Tone"}, {p::odLevel, "Level"}}},
        "An Ibanez Tube Screamer circuit, its knobs where a real one's are. Thins "
        "the lows and pushes the mids. Low drive and high level tightens a dirty "
        "amp; on a clean amp it's a crunch tone of its own.",
-       0xff46531f, Pedal::Art::overdrive},
+       0xffff2bd6, Pedal::Art::overdrive},
       {"distortion", p::distOn,
        {{{p::distAmount, "Dist"}, {p::distTone, "Filter"},
          {p::distLevel, "Volume"}}},
        "A ProCo RAT circuit, its knobs where a real one's are: nearly clean with "
        "Dist down, heavy from noon up. Filter darkens clockwise, as on a real one.",
-       0xff6a1414, Pedal::Art::distortion},
+       0xffff2bd6, Pedal::Art::distortion},
       {"boost", p::boostOn,
        {{{p::boostGain, "Gain"}, {p::boostBass, "Bass"},
          {p::boostTreble, "Treble"}}},
        "After an MXR Micro Amp: up to 26 dB of clean gain, to hit the amp harder "
        "or lift a solo. Bass and Treble aren't on the original; at noon they're "
        "flat.",
-       0xffc08c23, Pedal::Art::boost},
+       0xffff2bd6, Pedal::Art::boost},
       {"phaser", p::phaserOn,
        {{{p::phaserRate, "Speed"}, {p::phaserDepth, "Depth"},
          {p::phaserFeedback, "Feedback"}}},
        "After an MXR Phase 90: Speed is its one knob. Depth all the way up is the "
        "original's sweep. Feedback sharpens it into a vocal resonance.",
-       0xffa2441b, Pedal::Art::phaser},
+       0xff00f0ff, Pedal::Art::phaser},
       {"flanger", p::flangerOn,
        {{{p::flangerRate, "Speed"}, {p::flangerDepth, "Width"},
          {p::flangerFeedback, "Regen"}}},
        "After an MXR M117. A slow speed and high regen for the classic whoosh.",
-       0xff2b2d66, Pedal::Art::flanger},
+       0xff00f0ff, Pedal::Art::flanger},
       {"chorus", p::chorusOn,
        {{{p::chorusRate, "Rate"}, {p::chorusDepth, "Depth"},
          {p::chorusMix, "Mix"}}},
        "After a Boss CE-2. Mix isn't on the original: noon is the original, and "
        "all the way up its vibrato.",
-       0xff17716b, Pedal::Art::chorus},
+       0xff00f0ff, Pedal::Art::chorus},
       {"tremolo", p::tremOn,
        {{{p::tremRate, "Rate"}, {p::tremDepth, "Depth"},
          {p::tremShape, "Wave"}}},
        "After a Boss TR-2. Wave goes from a triangle, a smooth throb, to a square, "
        "a hard chop.",
-       0xff1f4f35, Pedal::Art::tremolo},
+       0xff00f0ff, Pedal::Art::tremolo},
       {"delay", p::delayOn,
        {{{p::delayTime, "Delay"}, {p::delayFeedback, "Regen"},
          {p::delayMix, "Mix"}}},
        "After an MXR Carbon Copy: repeats get darker the longer the delay. It goes "
        "well past the original's 600 ms.",
-       0xffd4ccb8, Pedal::Art::delay},
+       0xfff5ff3b, Pedal::Art::delay},
       {"reverb", p::reverbOn,
        {{{p::reverbDecay, "Decay"}, {p::reverbTone, "Tone"},
          {p::reverbMix, "Mix"}}},
        "Plate reverb. Not modelled on a particular pedal.",
-       0xff142a55, Pedal::Art::reverb},
+       0xfff5ff3b, Pedal::Art::reverb},
 }};
   return specs;
 }
 
-/** A silkscreened drawing of what the pedal does: `shape` takes how far along it
+/** A trace of what the pedal does to a signal: `shape` takes how far along it
     is, 0..1, and gives the height, -1..1. */
 juce::Path waveform(juce::Rectangle<float> area, const std::function<float(float)> &shape,
                     int points = 140) {
@@ -104,14 +104,13 @@ juce::Path waveform(juce::Rectangle<float> area, const std::function<float(float
   return path;
 }
 
-void drawArt(juce::Graphics &g, juce::Rectangle<float> area, Pedal::Art art, juce::Colour ink) {
+/** What the pedal does to a signal, traced on its scope; `glow` blooms it. */
+void drawArt(juce::Graphics &g, juce::Rectangle<float> area, Pedal::Art art, juce::Colour ink,
+             float glow) {
   using Art = Pedal::Art;
   constexpr float tau = juce::MathConstants<float>::twoPi;
-  const juce::PathStrokeType stroke(1.35f, juce::PathStrokeType::curved,
-                                    juce::PathStrokeType::rounded);
-  const auto draw = [&](const std::function<float(float)> &shape, float alpha = 0.85f) {
-    g.setColour(ink.withAlpha(alpha));
-    g.strokePath(waveform(area, shape), stroke);
+  const auto draw = [&](const std::function<float(float)> &shape, float alpha = 0.9f) {
+    strokeNeon(g, waveform(area, shape), ink.withMultipliedAlpha(alpha), 1.2f, glow * alpha);
   };
   switch (art) {
   case Art::wah: // a resonant peak, swept
@@ -182,15 +181,12 @@ void drawArt(juce::Graphics &g, juce::Rectangle<float> area, Pedal::Art art, juc
 
 Pedal::Pedal(juce::AudioProcessorValueTreeState &state, const Spec &s)
     : spec(s) {
-  const juce::Colour finish(spec.paint);
-  ink = finish.getPerceivedBrightness() > 0.55f ? juce::Colour(0xff17120c)
-                                                : juce::Colour(0xfff3efe5);
   for (size_t i = 0; i < knobs.size(); ++i) {
     knobs[i] = std::make_unique<Knob>(state, spec.knobs[i].first, spec.knobs[i].second,
                                       Knob::Size::pedal);
-    knobs[i]->setInk(ink);
     addAndMakeVisible(*knobs[i]);
   }
+  footswitch.setLight(juce::Colour(spec.neon));
   footswitch.setTooltip(juce::String(spec.tooltip) + " (click to switch)");
   footswitch.onClick = [this] {
     onAttachment->setValueAsCompleteGesture(isOn() ? 0.0f : 1.0f);
@@ -203,84 +199,86 @@ Pedal::Pedal(juce::AudioProcessorValueTreeState &state, const Spec &s)
 
 void Pedal::setOn(bool on) {
   footswitch.setToggleState(on, juce::dontSendNotification);
+  // Bypassed, its markings dim but stay readable, and its scale lights white.
+  const juce::Colour light(spec.neon);
   for (auto &k : knobs)
-    k->setAlpha(on ? 1.0f : 0.86f);
+    k->setColours(on ? light : light.withAlpha(0.6f), on ? light : colours::text.withAlpha(0.7f));
   repaint();
 }
 
-void Pedal::paintEnclosure(juce::Graphics &g) const {
+void Pedal::paintCard(juce::Graphics &g) const {
+  using namespace colours;
   const bool on = isOn();
-  constexpr float corner = 9.0f;
-  const auto body = getLocalBounds().toFloat();
-  auto finish = juce::Colour(spec.paint);
-  if (!on) // bypassed: the paint goes dull, the printing stays readable
-    finish = finish.interpolatedWith(juce::Colour(0xff17171a), 0.34f);
-
-  juce::Path shape;
-  shape.addRoundedRectangle(body, corner);
-  {
-    const juce::Graphics::ScopedSaveState save(g);
-    g.reduceClipRegion(shape);
-    g.setGradientFill(juce::ColourGradient(finish.brighter(0.22f), body.getX(), body.getY(),
-                                           finish.darker(0.42f), body.getRight(),
-                                           body.getBottom(), false));
-    g.fillRect(body);
-    // Powder coat: fine speckle, then a sheen where the light pools at the top.
-    fillTexture(g, body, Texture::grain, 0.05f);
-    fillTexture(g, body, Texture::tolex, 0.1f);
-    g.setGradientFill(juce::ColourGradient(
-        juce::Colours::white.withAlpha(on ? 0.13f : 0.05f), body.getCentreX(), body.getY(),
-        juce::Colours::white.withAlpha(0.0f), body.getCentreX(), body.getY() + body.getHeight() * 0.5f,
-        false));
-    g.fillRect(body);
+  const juce::Colour light(spec.neon);
+  const auto body = getLocalBounds().toFloat().reduced(4.0f);
+  const auto shape = bevelBox(body, 10.0f);
+  g.setColour(panel);
+  g.fillPath(shape);
+  if (on) { // lit faintly from within
+    g.setColour(light.withAlpha(0.05f));
+    g.fillPath(shape);
   }
-  g.setColour(juce::Colours::black.withAlpha(0.85f));
-  g.drawRoundedRectangle(body.reduced(0.5f), corner, 1.0f);
-  g.setColour(juce::Colours::white.withAlpha(on ? 0.3f : 0.14f));
-  g.fillRect(body.reduced(corner, 0.0f).withY(body.getY() + 1.0f).withHeight(1.0f));
+  strokeNeon(g, shape, light.withAlpha(on ? 0.95f : 0.3f), on ? 1.2f : 1.0f,
+             on ? 0.7f : 0.0f);
 
-  constexpr float inset = 7.5f;
-  int seed = spec.name[0] + spec.name[1];
-  for (const auto at : {body.getTopLeft().translated(inset, inset),
-                        body.getTopRight().translated(-inset, inset),
-                        body.getBottomLeft().translated(inset, -inset),
-                        body.getBottomRight().translated(-inset, -inset)})
-    drawScrew(g, at, 2.6f, ++seed);
+  // The name on a plate, lit solid while it's on.
+  const auto plate = nameArea.toFloat();
+  const auto plateShape = bevelBox(plate, 5.0f);
+  const auto name = juce::String(spec.name).toUpperCase();
+  const auto nameFont = headline(12.5f, 0.0f);
+  const auto letters = textPath(name, nameFont, plate.reduced(6.0f, 0.0f),
+                                juce::Justification::centred, 1, 0.75f);
+  if (on) {
+    fillNeon(g, plateShape, light, 0.8f);
+    g.setColour(black);
+    g.fillPath(letters);
+  } else {
+    g.setColour(light.withAlpha(0.45f));
+    g.strokePath(plateShape, juce::PathStrokeType(1.0f));
+    g.setColour(light.withAlpha(0.6f));
+    g.fillPath(letters);
+  }
 
-  // The name, printed large.
-  const auto printed = ink.withAlpha(on ? 1.0f : 0.78f);
-  g.setColour(printed);
-  g.setFont(display(26.0f, 0.01f));
-  g.drawFittedText(juce::String(spec.name).toUpperCase(), nameArea,
-                   juce::Justification::centred, 1, 0.75f);
-  drawArt(g, artArea.toFloat(), spec.art, printed);
+  // The scope, tracing what it does to a signal.
+  const auto scope = artArea.toFloat();
+  g.setColour(glass);
+  g.fillRect(scope);
+  g.setColour(blue.withAlpha(0.35f));
+  g.fillRect(scope.withSizeKeepingCentre(scope.getWidth() - 2.0f, 1.0f));
+  for (int i = 1; i < 6; ++i)
+    g.fillRect(juce::Rectangle<float>(scope.getX() + scope.getWidth() * (float)i / 6.0f,
+                                      scope.getY() + 1.0f, 1.0f, scope.getHeight() - 2.0f));
+  g.setColour(blue.withAlpha(0.8f));
+  g.drawRect(scope, 1.0f);
+  drawArt(g, scope.reduced(8.0f, 4.0f), spec.art, on ? light : light.withAlpha(0.45f),
+          on ? 0.8f : 0.0f);
 }
 
 void Pedal::paint(juce::Graphics &g) {
-  juce::DropShadow(juce::Colours::black.withAlpha(0.8f), 10, {0, 4})
-      .drawForRectangle(g, getLocalBounds());
-  enclosure.draw(g, getLocalBounds(), isOn() ? 1 : 0,
-                 [this](juce::Graphics &c) { paintEnclosure(c); });
-  drawLed(g, led, isOn(), colours::accent());
+  card.draw(g, getLocalBounds(), isOn() ? 1 : 0,
+            [this](juce::Graphics &c) { paintCard(c); });
+  drawLed(g, led, isOn(), juce::Colour(spec.neon));
 }
 
 void Pedal::resized() {
-  auto b = getLocalBounds().reduced(3, 0);
-  b.removeFromTop(8);
-  auto knobRow = b.removeFromTop(74);
+  auto b = getLocalBounds().reduced(7, 0);
+  b.removeFromTop(11);
+  auto knobRow = b.removeFromTop(72);
   const int column = knobRow.getWidth() / (int)knobs.size();
   for (auto &knob : knobs) {
     knob->setMaxDiameter(column);
     knob->setBounds(knobRow.removeFromLeft(column));
   }
-  b.removeFromTop(1);
-  nameArea = b.removeFromTop(27).reduced(6, 0);
-  artArea = b.removeFromTop(24).reduced(16, 2);
   b.removeFromTop(5);
-  led = juce::Rectangle<float>(9.0f, 9.0f).withCentre(
-      {(float)b.getCentreX(), (float)b.getY() + 4.5f});
+  nameArea = b.removeFromTop(24).reduced(2, 0);
+  b.removeFromTop(6);
+  artArea = b.removeFromTop(30).reduced(2, 0);
+  b.removeFromTop(7);
+  led = juce::Rectangle<float>(8.0f, 8.0f).withCentre(
+      {(float)b.getCentreX(), (float)b.getY() + 4.0f});
   b.removeFromTop(10);
-  footswitch.setBounds(b.withSizeKeepingCentre(58, juce::jmin(58, b.getHeight())));
+  b.removeFromBottom(4);
+  footswitch.setBounds(b.withSizeKeepingCentre(56, juce::jmin(56, b.getHeight())));
 }
 
 PedalBoard::PedalBoard(juce::AudioProcessorValueTreeState &state) {
@@ -319,40 +317,57 @@ void PedalBoard::paint(juce::Graphics &g) {
   board.draw(g, getLocalBounds(), 0, [this](juce::Graphics &c) {
     using namespace colours;
     // Row captions; the amp and cab sit between the two rows.
-    c.setFont(caption());
-    c.setColour(textSoft);
-    c.drawText("INTO THE AMP", 0, 0, getWidth(), captionHeight - 5,
-               juce::Justification::centredLeft);
-    c.drawText("AFTER THE CAB",
-               ampSlot.withX(ampSlot.getRight() + 10).withRight(getWidth()),
-               juce::Justification::centredLeft);
+    const auto captionRow = [&c](juce::Rectangle<int> area, const char *title) {
+      const auto font = caption();
+      c.setFont(font);
+      c.setColour(textSoft);
+      const auto row = area.toFloat();
+      c.drawText(title, row, juce::Justification::centredLeft, false);
+      // Chevrons after it, pointing the way the signal goes.
+      const float x = row.getX() + juce::GlyphArrangement::getStringWidth(font, title) + 10.0f;
+      juce::Path chevrons;
+      for (int i = 0; i < 3; ++i) {
+        const float at = x + 7.0f * (float)i;
+        chevrons.startNewSubPath(at, row.getCentreY() - 3.5f);
+        chevrons.lineTo(at + 3.5f, row.getCentreY());
+        chevrons.lineTo(at, row.getCentreY() + 3.5f);
+      }
+      c.setColour(cyan.withAlpha(0.7f));
+      c.strokePath(chevrons, juce::PathStrokeType(1.2f));
+    };
+    captionRow(juce::Rectangle<int>(0, 0, getWidth(), captionHeight - 5), "INTO THE AMP");
+    captionRow(ampSlot.withX(ampSlot.getRight() + 10).withRight(getWidth()), "AFTER THE CAB");
 
-    // Couplers joining each pedal's jacks to the next.
+    // A wire from each pedal to the next, with the signal's direction on it.
     for (size_t i = 0; i + 1 < pedals.size(); ++i) {
       if ((i + 1) % perRow == 0)
         continue;
-      const auto left = pedals[i]->getBounds();
-      const auto coupler = juce::Rectangle<float>((float)left.getRight() - 1.0f,
-                                                  (float)left.getCentreY() - 4.0f,
-                                                  (float)gap + 2.0f, 8.0f);
-      c.setGradientFill(juce::ColourGradient(
-          juce::Colour(0xffc7c7cc), 0.0f, coupler.getY(), juce::Colour(0xff36363a), 0.0f,
-          coupler.getBottom(), false));
-      c.fillRoundedRectangle(coupler, 1.0f);
-      c.setColour(juce::Colours::black.withAlpha(0.6f));
-      c.drawRoundedRectangle(coupler, 1.0f, 0.7f);
+      const auto left = pedals[i]->getBounds().toFloat();
+      const float y = left.getCentreY() - 4.0f;
+      juce::Path wire;
+      wire.startNewSubPath(left.getRight() - 4.0f, y);
+      wire.lineTo(left.getRight() + (float)gap + 3.0f, y);
+      strokeNeon(c, wire, cyan.withAlpha(0.75f), 1.0f, 0.5f);
+      const float tip = left.getRight() + (float)gap * 0.5f + 3.0f;
+      juce::Path arrow;
+      arrow.addTriangle(tip - 5.0f, y - 3.5f, tip - 5.0f, y + 3.5f, tip, y);
+      c.setColour(cyan);
+      c.fillPath(arrow);
     }
 
-    // The amp, as a small plate heading the second row.
+    // The amp, as a striped plate heading the second row.
     const auto amp = ampSlot.toFloat();
-    c.setGradientFill(juce::ColourGradient(juce::Colour(0xff36363b), 0.0f, amp.getY(),
-                                           juce::Colour(0xff1c1c1f), 0.0f, amp.getBottom(), false));
-    c.fillRoundedRectangle(amp, 2.5f);
-    c.setColour(accent());
-    c.drawRoundedRectangle(amp.reduced(0.5f), 2.5f, 1.0f);
-    c.setColour(text);
-    c.setFont(silk(11.5f, 0.12f));
-    c.drawText("AMP", amp, juce::Justification::centred);
+    const auto plate = bevelBox(amp, 5.0f);
+    c.setColour(glass);
+    c.fillPath(plate);
+    {
+      const juce::Graphics::ScopedSaveState save(c);
+      c.reduceClipRegion(plate);
+      drawStripes(c, amp, blue.withAlpha(0.7f), 8.0f, 3.0f);
+    }
+    strokeNeon(c, plate, cyan, 1.0f, 0.5f);
+    drawAberrated(c, "AMP", caps(10.5f, 0.2f), amp, juce::Justification::centred,
+                  colours::text, 1.0f);
   });
 }
 } // namespace headroom::gui

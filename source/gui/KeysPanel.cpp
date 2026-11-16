@@ -79,7 +79,7 @@ KeysPanel::KeysPanel(agent::Session &sess, agent::AgentSettings &sett)
                       "code filled in");
   addChildComponent(codeLink);
 
-  styleAsText(notes, sans(14.0f), colours::textSoft);
+  styleAsText(notes, body(11.5f), colours::textSoft);
   notes.setText(
       "Requests go straight from this computer to the company you choose, on "
       "your account and at your cost. Keys are saved only in " +
@@ -169,7 +169,7 @@ void KeysPanel::resized() {
 void KeysPanel::paint(juce::Graphics &g) {
   frame.draw(g, getLocalBounds(), 0, [this](juce::Graphics &c) {
     drawPanel(c, getLocalBounds(), "keys");
-    drawRecess(c, screenArea.toFloat(), 4.0f);
+    drawScreen(c, screenArea.toFloat());
   });
   g.setFont(caption());
   for (const auto &row : rows) {
@@ -180,13 +180,11 @@ void KeysPanel::paint(juce::Graphics &g) {
   if (detached)
     return;
   const auto code = session.getSignInCode();
-  g.setFont(sans(13.5f));
+  g.setFont(body(12.5f));
   if (code.userCode.isNotEmpty()) {
-    const auto font = readout(18.0f, 0.06f);
-    g.setFont(font);
-    g.setColour(colours::accent());
-    g.drawText(code.userCode, statusArea, juce::Justification::centredLeft, false);
-    g.setFont(sans(13.5f));
+    drawAberrated(g, code.userCode, readout(30.0f, 0.12f), statusArea.toFloat(),
+                  juce::Justification::centredLeft, colours::yellow, 1.2f);
+    g.setFont(body(12.5f));
     g.setColour(colours::textSoft);
     g.drawFittedText("enter this code at " +
                          code.verificationUri.fromFirstOccurrenceOf("://", false, false) +
@@ -194,7 +192,7 @@ void KeysPanel::paint(juce::Graphics &g) {
                      messageArea, juce::Justification::topLeft, 2);
     return;
   }
-  g.setColour(secretKeyRefused ? colours::accent() : colours::textSoft);
+  g.setColour(secretKeyRefused ? colours::yellow : colours::textSoft);
   g.drawFittedText(secretKeyRefused
                        ? "That's a secret key, which must stay on a server. Use your "
                          "publishable one."

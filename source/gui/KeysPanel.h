@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Hardware.h"
+#include "Neon.h"
 #include "agent/Session.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace headroom::gui {
 /** The API keys for the agent's three providers and the TONE3000 key with its
-    sign-in, on a rack panel. It keeps itself in step with the settings and the
+    sign-in, on a panel. It keeps itself in step with the settings and the
     session, so it can be shown anywhere (the settings popover opens it in a
     callout of its own). Both must outlive it. */
 class KeysPanel final : public juce::Component, private juce::ChangeListener {
@@ -15,7 +15,7 @@ public:
   KeysPanel(agent::Session &, agent::AgentSettings &);
   ~KeysPanel() override;
 
-  static constexpr int panelWidth = 580, panelHeight = 440;
+  static constexpr int panelWidth = 580, panelHeight = 452;
 
   /** Lets go of the session and the settings, for when they're about to go: the
       callout holding this can outlive the editor that opened it. It does

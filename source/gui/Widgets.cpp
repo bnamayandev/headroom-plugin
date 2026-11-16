@@ -17,7 +17,8 @@ Knob::Knob(juce::AudioProcessorValueTreeState &state,
              juce::Slider::TextBoxBelow),
       attachment(state, parameterId, slider), size(sizeToUse) {
   title.setText(titleText.toUpperCase(), juce::dontSendNotification);
-  title.setFont(size == Size::pedal ? silk(10.0f, 0.06f) : silk(12.0f, 0.11f));
+  // Three to a pedal leaves no room for a wide face: those print as a terminal.
+  title.setFont(size == Size::pedal ? readout(15.0f) : caps(10.5f, 0.18f));
   title.setColour(juce::Label::textColourId, colours::text);
   title.setJustificationType(juce::Justification::centred);
   title.setInterceptsMouseClicks(false, false);
@@ -40,10 +41,10 @@ Knob::Knob(juce::AudioProcessorValueTreeState &state,
   addAndMakeVisible(slider);
 }
 
-void Knob::setInk(juce::Colour ink) {
+void Knob::setColours(juce::Colour ink, juce::Colour lit) {
   title.setColour(juce::Label::textColourId, ink);
   slider.setColour(juce::Slider::textBoxTextColourId, ink);
-  slider.setColour(juce::Slider::rotarySliderOutlineColourId, ink.withAlpha(0.32f));
+  slider.setColour(juce::Slider::rotarySliderFillColourId, lit);
 }
 
 void Knob::resized() {
@@ -69,9 +70,9 @@ Fader::Fader(juce::AudioProcessorValueTreeState &state,
     addAndMakeVisible(l);
   }
   title.setText(titleText.toUpperCase(), juce::dontSendNotification);
-  title.setFont(silk(11.5f, 0.07f));
-  title.setColour(juce::Label::textColourId, colours::text);
-  value.setFont(readout(12.0f));
+  title.setFont(readout(17.0f));
+  title.setColour(juce::Label::textColourId, colours::textSoft);
+  value.setFont(readout(16.0f));
 
   // Compact, to fit a narrow column: "+3.5", "0.0", "-10.0".
   slider.onValueChange = [this] {
@@ -109,26 +110,28 @@ void LevelMeter::pushPeak(float peakGain, float secondsSinceLast) {
 }
 
 void LevelMeter::paint(juce::Graphics &g) {
+  using namespace colours;
   constexpr float minDb = -60.0f, maxDb = 6.0f, hotDb = -6.0f, warmDb = -18.0f;
-  constexpr float pitch = 4.0f, segment = 3.0f; // one LED every 4 px
+  constexpr float pitch = 4.0f, segment = 2.0f; // one bar every 4 px
   auto bounds = getLocalBounds().toFloat();
   auto clipLed = bounds.removeFromTop(6.0f);
   bounds.removeFromTop(4.0f);
 
-  drawLed(g, clipLed.withSizeKeepingCentre(6.0f, 6.0f), clipped, colours::accent());
+  drawLed(g, clipLed.withSizeKeepingCentre(6.0f, 6.0f), clipped, magenta);
 
-  drawRecess(g, bounds, 2.0f);
+  g.setColour(glass);
+  g.fillRect(bounds);
+  g.setColour(blue.withAlpha(0.8f));
+  g.drawRect(bounds, 1.0f);
   const auto ladder = bounds.reduced(2.0f);
   const int count = (int)(ladder.getHeight() / pitch);
   for (int i = 0; i < count; ++i) {
     const float top = ladder.getBottom() - pitch * (float)(i + 1) + (pitch - segment);
     const float db = juce::jmap((float)i + 0.5f, 0.0f, (float)count, minDb, maxDb);
-    const auto led = juce::Rectangle<float>(ladder.getX(), top, ladder.getWidth(), segment);
-    const auto colour = db >= hotDb    ? colours::accent()
-                        : db >= warmDb ? colours::text
-                                       : colours::textSoft.interpolatedWith(juce::Colours::black, 0.18f);
-    g.setColour(db <= levelDb ? colour : colour.withAlpha(0.08f));
-    g.fillRect(led);
+    const auto bar = juce::Rectangle<float>(ladder.getX(), top, ladder.getWidth(), segment);
+    const auto colour = db >= hotDb ? magenta : db >= warmDb ? yellow : cyan;
+    g.setColour(db <= levelDb ? colour : colour.withAlpha(0.1f));
+    g.fillRect(bar);
   }
 }
 
@@ -206,23 +209,23 @@ void Spectrum::paint(juce::Graphics &g) {
 
   graticule.draw(g, getLocalBounds(), juce::roundToInt(scaleDb * 10.0),
                  [this, bounds](juce::Graphics &c) {
-    drawRecess(c, bounds, 3.0f);
+    drawScreen(c, bounds);
     const auto columns = (float)juce::jmax(1, (int)bands.size());
-    c.setColour(line.withAlpha(0.05f));
+    c.setColour(blue.withAlpha(0.3f));
     for (float i = 1.0f; i < columns; i += 1.0f)
-      c.fillRect(bounds.getX() + bounds.getWidth() * i / columns, bounds.getY() + 1.0f,
-                 1.0f, bounds.getHeight() - 2.0f);
+      c.fillRect(bounds.getX() + std::round(bounds.getWidth() * i / columns),
+                 bounds.getY() + 1.0f, 1.0f, bounds.getHeight() - 2.0f);
     const auto scale = bounds.reduced(0.0f, trackInset);
-    c.setFont(readout(8.5f));
+    c.setFont(readout(14.0f));
     for (int step = -2; step <= 2; ++step) {
-      const float y = scale.getY() + scale.getHeight() * ((float)step + 2.0f) * 0.25f;
-      c.setColour(line.withAlpha(step == 0 ? 0.13f : 0.05f));
-      c.fillRect(bounds.getX() + 1.0f, y - 0.5f, bounds.getWidth() - 2.0f, 1.0f);
+      const float y = std::round(scale.getY() + scale.getHeight() * ((float)step + 2.0f) * 0.25f);
+      c.setColour(blue.withAlpha(step == 0 ? 0.75f : 0.3f));
+      c.fillRect(bounds.getX() + 1.0f, y, bounds.getWidth() - 2.0f, 1.0f);
       if (step % 2 == 0) {
         const int db = juce::roundToInt(scaleDb * (float)-step * 0.5f);
-        c.setColour(mutedSoft);
+        c.setColour(muted);
         c.drawText((db > 0 ? "+" : "") + juce::String(db),
-                   juce::Rectangle<float>(bounds.getX() + 5.0f, y - 12.0f, 24.0f, 11.0f),
+                   juce::Rectangle<float>(bounds.getX() + 6.0f, y - 13.0f, 30.0f, 12.0f),
                    juce::Justification::centredLeft, false);
       }
     }
@@ -231,10 +234,8 @@ void Spectrum::paint(juce::Graphics &g) {
   const auto inner = bounds.reduced(1.0f);
   const bool hearing = std::any_of(levelsDb.begin(), levelsDb.end(),
                                    [](float level) { return level > floorDb + 0.5f; });
-  juce::Path clip;
-  clip.addRoundedRectangle(inner, 2.0f);
   const juce::Graphics::ScopedSaveState save(g);
-  g.reduceClipRegion(clip);
+  g.reduceClipRegion(inner.getSmallestIntegerContainer());
 
   const auto point = [&](int p) {
     return juce::Point<float>(
@@ -258,17 +259,15 @@ void Spectrum::paint(juce::Graphics &g) {
     fill.lineTo(bounds.getBottomRight());
     fill.lineTo(bounds.getBottomLeft());
     fill.closeSubPath();
-    g.setGradientFill(juce::ColourGradient(accent().withAlpha(0.46f), 0.0f, inner.getY(),
-                                           accent().withAlpha(0.03f), 0.0f, inner.getBottom(),
+    g.setGradientFill(juce::ColourGradient(accent().withAlpha(0.34f), 0.0f, inner.getY(),
+                                           accent().withAlpha(0.02f), 0.0f, inner.getBottom(),
                                            false));
     g.fillPath(fill);
-    g.setColour(accent().withAlpha(0.22f));
-    g.strokePath(curve, juce::PathStrokeType(3.0f));
-    g.setColour(accent().interpolatedWith(juce::Colours::white, 0.12f).withAlpha(0.9f));
-    g.strokePath(curve, juce::PathStrokeType(1.1f));
+    strokeNeon(g, curve, accent(), 1.2f, 0.8f);
   }
 
-  // The EQ's shape, through the fader caps and out flat past the ends.
+  // The EQ's shape, through the fader caps and out flat past the ends: the
+  // data colour, unless that's the neon the spectrum is in.
   if (!bands.empty()) {
     const auto scale = bounds.reduced(0.0f, trackInset);
     const auto bandPoint = [&](size_t i) {
@@ -285,60 +284,50 @@ void Spectrum::paint(juce::Graphics &g) {
     }
     shape.lineTo(bandPoint(bands.size() - 1));
     shape.lineTo(bounds.getRight(), bandPoint(bands.size() - 1).y);
-    g.setColour(text.withAlpha(0.1f));
-    g.strokePath(shape, juce::PathStrokeType(3.0f));
-    g.setColour(text.withAlpha(0.55f));
-    g.strokePath(shape, juce::PathStrokeType(1.1f));
+    const auto ink = getNeon() == Neon::yellow ? text : yellow;
+    strokeNeon(g, shape, ink.withAlpha(0.8f), 1.1f, 0.5f);
   }
+}
+
+void Footswitch::setLight(juce::Colour colour) {
+  light = colour;
+  repaint();
 }
 
 void Footswitch::paintButton(juce::Graphics &g, bool highlighted, bool down) {
-  const auto size = juce::jmin(getWidth(), getHeight());
-  const auto at = getLocalBounds().toFloat().getCentre().translated(
-      -(float)size * 0.5f, -(float)size * 0.5f);
-  (down ? pressed : up).draw(g, at, size, size, 0, [size, down](juce::Graphics &c) {
-    const auto centre = juce::Point<float>((float)size, (float)size) * 0.5f;
-    const float nut = (float)size * 0.43f;
+  using namespace colours;
+  constexpr float pi = juce::MathConstants<float>::pi;
+  const bool on = getToggleState();
+  const auto size = (float)juce::jmin(getWidth(), getHeight());
+  const auto centre = getLocalBounds().toFloat().getCentre();
+  const float nut = size * 0.43f;
 
-    // The shadow it throws on the enclosure.
-    juce::ColourGradient shadow(juce::Colours::black.withAlpha(0.65f),
-                                centre.translated(0.0f, 2.0f),
-                                juce::Colours::black.withAlpha(0.0f),
-                                centre.translated(nut + 2.0f, 2.0f), true);
-    shadow.addColour(0.8, juce::Colours::black.withAlpha(0.5f));
-    c.setGradientFill(shadow);
-    c.fillEllipse(circle(centre.translated(0.0f, 2.0f), nut + 2.0f));
-
-    // The hex nut.
-    juce::Path hex;
-    hex.addPolygon(centre, 6, nut, juce::MathConstants<float>::pi / 6.0f);
-    juce::ColourGradient nutFill(juce::Colour(0xff9c9ca2), centre.x - nut, centre.y - nut,
-                                 juce::Colour(0xff222225), centre.x + nut, centre.y + nut,
-                                 false);
-    nutFill.addColour(0.5, juce::Colour(0xff515156));
-    c.setGradientFill(nutFill);
-    c.fillPath(hex);
-    c.setColour(juce::Colours::black.withAlpha(0.65f));
-    c.strokePath(hex, juce::PathStrokeType(0.9f));
-
-    // The plunger: a chrome dome, sitting lower while it's held.
-    const float dome = nut * (down ? 0.68f : 0.74f);
-    c.setColour(juce::Colours::black.withAlpha(0.75f));
-    c.fillEllipse(circle(centre.translated(0.0f, 0.8f), dome + 1.2f));
-    juce::ColourGradient chrome(juce::Colours::white, centre.translated(-dome * 0.3f, -dome * 0.45f),
-                                juce::Colour(0xff17171a), centre.translated(dome * 0.7f, dome * 0.95f),
-                                true);
-    chrome.addColour(0.35, juce::Colour(0xffb6b6bc));
-    chrome.addColour(0.72, juce::Colour(0xff44444a));
-    chrome.addColour(0.9, juce::Colour(0xff8c8c92));
-    c.setGradientFill(chrome);
-    c.fillEllipse(circle(centre, dome));
-  });
+  // The nut: a hexagon, its frame splitting into colours under the pointer.
+  juce::Path hex;
+  hex.addPolygon(centre, 6, nut, pi / 6.0f);
+  g.setColour(glass);
+  g.fillPath(hex);
   if (highlighted) {
-    g.setColour(juce::Colours::white.withAlpha(0.1f));
-    g.fillEllipse(circle(getLocalBounds().toFloat().getCentre(), (float)size * 0.32f));
+    g.setColour(magenta.withAlpha(0.55f));
+    g.strokePath(hex, juce::PathStrokeType(1.0f), juce::AffineTransform::translation(-1.2f, 0.0f));
+    g.setColour(cyan.withAlpha(0.55f));
+    g.strokePath(hex, juce::PathStrokeType(1.0f), juce::AffineTransform::translation(1.2f, 0.0f));
   }
+  strokeNeon(g, hex, light.withAlpha(on || highlighted ? 1.0f : 0.5f), 1.2f, on ? 0.8f : 0.0f);
+
+  // The switch, sitting lower while it's held: lit solid while the pedal's on.
+  juce::Path stomp;
+  stomp.addPolygon(centre, 8, nut * (down ? 0.5f : 0.58f), pi / 8.0f);
+  if (on) {
+    fillNeon(g, stomp, light, 1.0f);
+    return;
+  }
+  g.setColour(light.withAlpha(highlighted ? 0.2f : 0.1f));
+  g.fillPath(stomp);
+  g.setColour(light.withAlpha(0.6f));
+  g.strokePath(stomp, juce::PathStrokeType(1.0f));
 }
+
 /** Selectable text that sizes to fit: a read-only editor with its chrome off. */
 void styleAsText(juce::TextEditor &editor, const juce::Font &font, juce::Colour colour) {
   editor.setMultiLine(true, true);
@@ -357,13 +346,13 @@ void styleAsText(juce::TextEditor &editor, const juce::Font &font, juce::Colour 
 }
 
 void styleLink(juce::HyperlinkButton &link, float size) {
-  link.setFont(sans(size, true), false, juce::Justification::centredLeft);
+  link.setFont(body(size), false, juce::Justification::centredLeft);
   link.setColour(juce::HyperlinkButton::textColourId, colours::accent());
 }
 
 void styleSecret(juce::TextEditor &editor) {
   editor.setPasswordCharacter((juce::juce_wchar)0x2022);
-  editor.setFont(readout(13.5f));
+  editor.setFont(readout(19.0f));
   editor.setJustification(juce::Justification::centredLeft);
   editor.setIndents(8, 0);
   editor.setSelectAllWhenFocused(true);

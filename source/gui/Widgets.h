@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Hardware.h"
+#include "Neon.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
@@ -28,8 +28,9 @@ public:
        Size size = Size::regular);
   void resized() override;
 
-  /** The colour its markings are printed in, for a pedal's paint. */
-  void setInk(juce::Colour);
+  /** The colours its markings are printed in and its scale lights in, for a
+      pedal. */
+  void setColours(juce::Colour ink, juce::Colour lit);
   void setMaxDiameter(int diameter) { maxDiameter = diameter; }
 
 private:
@@ -54,7 +55,8 @@ private:
   juce::AudioProcessorValueTreeState::SliderAttachment attachment;
 };
 
-/** Vertical LED ladder with a dB scale (-60..+6 dBFS) and a clip light. */
+/** Vertical ladder of bars with a dB scale (-60..+6 dBFS) and a clip light:
+    cyan, then yellow from -18 dB, then magenta from -6. */
 class LevelMeter final : public juce::Component {
 public:
   /** Call at the GUI refresh rate with the peak since the last call. */
@@ -111,14 +113,17 @@ private:
   PaintCache graticule;
 };
 
-/** A chrome stomp switch in its hex nut. Its toggle state is the pedal's on/off. */
+/** A stomp switch: an octagon in a hexagon, lit solid while it's on (its toggle
+    state, the pedal's on/off). */
 class Footswitch final : public juce::Button {
 public:
   Footswitch() : juce::Button("footswitch") {}
+  /** The neon it lights in. */
+  void setLight(juce::Colour);
   void paintButton(juce::Graphics &, bool highlighted, bool down) override;
 
 private:
-  PaintCache up, pressed;
+  juce::Colour light{0xff00f0ff};
 };
 
 /** Selectable text that sizes to fit: a read-only editor with its chrome off. */

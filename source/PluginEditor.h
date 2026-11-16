@@ -31,6 +31,7 @@ private:
     explicit Canvas(HeadroomEditor &e) : owner(e) {}
     void paint(juce::Graphics &g) override { owner.paintCanvas(g); }
     void resized() override { owner.layoutCanvas(); }
+    void paintOverChildren(juce::Graphics &g) override { owner.paintGlass(g); }
     void mouseDown(const juce::MouseEvent &e) override {
       owner.canvasMouseDown(e);
     }
@@ -44,6 +45,12 @@ private:
   void paintFixedParts(juce::Graphics &);
   void paintFooter(juce::Graphics &);
   void paintBeatLights(juce::Graphics &);
+  void paintLogo(juce::Graphics &);
+  void paintLiveBadge(juce::Graphics &);
+  /** The tube's glass, over everything the canvas holds. */
+  void paintGlass(juce::Graphics &);
+  /** Whether the logo's picture is tearing, as it does every few seconds. */
+  bool isGlitching() const;
   void layoutCanvas();
   void canvasMouseDown(const juce::MouseEvent &);
   void canvasMouseDrag(const juce::MouseEvent &);
@@ -56,7 +63,7 @@ private:
   void changeListenerCallback(juce::ChangeBroadcaster *) override;
 
   void refreshModelStatus();
-  void refreshAmpHardware(float outputPeak);
+  void refreshAmpDisplays(float outputPeak);
   void applyPresetColour();
   void refreshStats();
   void refreshIrStatus();
@@ -110,7 +117,7 @@ private:
   gui::LevelMeter inputMeter;
 
   // Amp
-  gui::TubeBank tubes;
+  gui::WireCube cube;
   juce::Label modelName, modelDetails;
   juce::TextButton loadModelButton{"load .nam..."},
       builtinModelButton{"built-in"}, unloadModelButton{"unload"};
@@ -144,11 +151,13 @@ private:
   std::unique_ptr<juce::ParameterAttachment> transposeAttachment;
   juce::Label cpuLabel, latencyLabel;
 
-  juce::Rectangle<int> tabTray, inputPanel, ampPanel, ampDisplay, ampCaption,
-      cabPanel, eqPanel, outputPanel, metronomeCaption, beatLeds,
+  juce::Rectangle<int> logoArea, stripesBand, tabTray, inputPanel, ampPanel, ampDisplay,
+      ampCaption, cabPanel, eqPanel, outputPanel, metronomeCaption, beatLeds,
       transposeCaption, statsArea;
-  juce::Rectangle<float> gateLed, liveLed;
-  gui::PaintCache fixedParts;
+  juce::Rectangle<float> gateLed, liveBadge;
+  gui::PaintCache fixedParts, logoCache, glassCache;
+  float animationTime = 0.0f; // seconds, for what moves on its own
+  bool logoGlitched = false;  // as last painted
   bool modelLive = false;
   std::vector<double> tapTimes;
   std::uint32_t lastClickCount = 0;
