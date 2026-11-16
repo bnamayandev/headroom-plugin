@@ -6,7 +6,7 @@
 #include <optional>
 #include <vector>
 
-namespace evil::tuning {
+namespace headroom::tuning {
 inline constexpr int numStrings = 6;
 inline constexpr int lowestNote = 28, highestNote = 88; // E1 and E6, as MIDI
 /** This close to the target counts as in tune. */
@@ -65,7 +65,7 @@ Reading read(double hz, const Strings &, int lockedString);
 
 /** The tuning the tuner is set to, and the ones the player has saved. They
     belong to the player, not the sound, so presets and sessions don't touch
-    them: they're in EvilAmplifier/tunings.xml beside the user presets, shared
+    them: they're in Headroom/tunings.xml beside the user presets, shared
     by every open editor through a SharedResourcePointer. Broadcasts a change
     when any of it changes. Message thread only. */
 class TuningLibrary final : public juce::ChangeBroadcaster {
@@ -97,4 +97,4 @@ private:
   Strings current;
   std::vector<Tuning> user;
 };
-} // namespace evil::tuning
+} // namespace headroom::tuning

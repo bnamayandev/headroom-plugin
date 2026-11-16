@@ -1,10 +1,10 @@
 #include "Hardware.h"
 
-#include "EvilLookAndFeel.h"
+#include "HeadroomLookAndFeel.h"
 
 #include <vector>
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace {
 const juce::Colour black = juce::Colours::black, white = juce::Colours::white;
 
@@ -290,21 +290,29 @@ void drawVinyl(juce::Graphics &g, juce::Rectangle<int> bounds) {
   fillTexture(g, b, Texture::tolex, 0.2f);
 }
 
-void drawLogo(juce::Graphics &g, juce::Point<float> topLeft, float height) {
-  using namespace colours;
-  const auto wordFont = logoFont(height * 0.86f);
+namespace {
+/** The logo's letters for this height, their ink starting at the origin. */
+juce::Path logoLetters(float height) {
   juce::GlyphArrangement word;
-  word.addLineOfText(wordFont, "Evil", 0.0f, 0.0f);
+  word.addLineOfText(logoFont(height * 0.86f), "Headroom", 0.0f, 0.0f);
   juce::Path outline;
   word.createPath(outline);
 
   // Fit the letters' real ink to the top three quarters of the height.
   const auto ink = outline.getBounds();
-  const float wordHeight = height * 0.76f;
-  const float fit = wordHeight / ink.getHeight();
-  outline.applyTransform(juce::AffineTransform::translation(-ink.getX(), -ink.getY())
-                             .scaled(fit)
-                             .translated(topLeft));
+  const float fit = height * 0.76f / ink.getHeight();
+  outline.applyTransform(
+      juce::AffineTransform::translation(-ink.getX(), -ink.getY()).scaled(fit));
+  return outline;
+}
+} // namespace
+
+float logoWidth(float height) { return logoLetters(height).getBounds().getWidth(); }
+
+void drawLogo(juce::Graphics &g, juce::Point<float> topLeft, float height) {
+  using namespace colours;
+  auto outline = logoLetters(height);
+  outline.applyTransform(juce::AffineTransform::translation(topLeft));
   const auto letters = outline.getBounds();
 
   // Backlit, so the chrome stands off a glow in the accent.
@@ -636,4 +644,4 @@ void Speaker::paint(juce::Graphics &g) {
     g.fillEllipse(circle(getLocalBounds().toFloat().getCentre(), (float)size * 0.5f));
   }
 }
-} // namespace evil::gui
+} // namespace headroom::gui

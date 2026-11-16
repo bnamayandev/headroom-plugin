@@ -6,10 +6,10 @@
 #include <functional>
 #include <optional>
 
-namespace evil::gui {
+namespace headroom::gui {
 /** App-wide preferences (not part of presets or the host's session), shared by
     every open editor through a SharedResourcePointer and kept in
-    EvilAmplifier/settings.xml beside the user presets. Broadcasts a change
+    Headroom/settings.xml beside the user presets. Broadcasts a change
     when any of them is set. */
 class Settings final : public juce::ChangeBroadcaster {
 public:
@@ -77,4 +77,4 @@ private:
       hueStrip;
   bool draggingHue = false;
 };
-} // namespace evil::gui
+} // namespace headroom::gui

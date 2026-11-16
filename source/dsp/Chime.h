@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-namespace evil {
+namespace headroom {
 /** A soft two-note chime mixed into the output: the agent has answered. Well under
     a guitar's level, with a gentle attack so it never clicks, and silent the rest
     of the time. */
@@ -28,4 +28,4 @@ private:
   int position = 0, length = 0; // position == length: nothing sounding
   std::atomic<bool> pending{false};
 };
-} // namespace evil
+} // namespace headroom

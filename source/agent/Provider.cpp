@@ -2,7 +2,7 @@
 
 #include "Json.h"
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 constexpr int modelTimeoutMs = 5 * 60 * 1000; // searches run inside the request
 constexpr int maxOutputTokens = 16000;
@@ -492,4 +492,4 @@ bool isSafeLink(const juce::String &url) {
   return trimmed == url && (url.startsWithIgnoreCase("https://") ||
                             url.startsWithIgnoreCase("http://"));
 }
-} // namespace evil::agent
+} // namespace headroom::agent

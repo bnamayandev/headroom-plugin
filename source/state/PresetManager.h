@@ -4,7 +4,7 @@
 
 #include <functional>
 
-namespace evil {
+namespace headroom {
 /** Factory presets (embedded) and user presets (XML files in the user's
    app-data folder).
 
@@ -30,7 +30,7 @@ public:
   /** Where a preset's carried files come back out to, when they have to. */
   static juce::File getSavedFilesDirectory();
   static void setUserPresetDirectoryForTesting(const juce::File &);
-  static constexpr const char *fileExtension = ".evilpreset";
+  static constexpr const char *fileExtension = ".headroompreset";
   /** Beside a file, who made it and what it is. A preset carries that too. */
   static constexpr const char *attributionFileName = "attribution.json";
 
@@ -60,4 +60,4 @@ private:
   juce::Array<juce::File> userFiles;
   int currentIndex = 0;
 };
-} // namespace evil
+} // namespace headroom

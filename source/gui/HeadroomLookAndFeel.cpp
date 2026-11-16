@@ -1,8 +1,8 @@
-#include "EvilLookAndFeel.h"
+#include "HeadroomLookAndFeel.h"
 
-#include <EvilBinaryData.h>
+#include <HeadroomBinaryData.h>
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace colours {
 namespace {
 float accentHue = defaultAccentHue;
@@ -191,18 +191,18 @@ bool drawSymbol(juce::Graphics &g, const juce::String &text, juce::Rectangle<flo
 } // namespace
 
 Typefaces::Typefaces()
-    : sans(load(EvilBinaryData::BarlowRegular_ttf,
-                EvilBinaryData::BarlowRegular_ttfSize)),
-      sansMedium(load(EvilBinaryData::BarlowMedium_ttf,
-                      EvilBinaryData::BarlowMedium_ttfSize)),
-      silk(load(EvilBinaryData::BarlowSemiCondensedSemiBold_ttf,
-                EvilBinaryData::BarlowSemiCondensedSemiBold_ttfSize)),
-      display(load(EvilBinaryData::BarlowCondensedExtraBoldItalic_ttf,
-                   EvilBinaryData::BarlowCondensedExtraBoldItalic_ttfSize)),
-      readout(load(EvilBinaryData::ShareTechMonoRegular_ttf,
-                   EvilBinaryData::ShareTechMonoRegular_ttfSize)),
-      logo(load(EvilBinaryData::NewRockerRegular_ttf,
-                EvilBinaryData::NewRockerRegular_ttfSize)) {}
+    : sans(load(HeadroomBinaryData::BarlowRegular_ttf,
+                HeadroomBinaryData::BarlowRegular_ttfSize)),
+      sansMedium(load(HeadroomBinaryData::BarlowMedium_ttf,
+                      HeadroomBinaryData::BarlowMedium_ttfSize)),
+      silk(load(HeadroomBinaryData::BarlowSemiCondensedSemiBold_ttf,
+                HeadroomBinaryData::BarlowSemiCondensedSemiBold_ttfSize)),
+      display(load(HeadroomBinaryData::BarlowCondensedExtraBoldItalic_ttf,
+                   HeadroomBinaryData::BarlowCondensedExtraBoldItalic_ttfSize)),
+      readout(load(HeadroomBinaryData::ShareTechMonoRegular_ttf,
+                   HeadroomBinaryData::ShareTechMonoRegular_ttfSize)),
+      logo(load(HeadroomBinaryData::NewRockerRegular_ttf,
+                HeadroomBinaryData::NewRockerRegular_ttfSize)) {}
 
 juce::Font sans(float size, bool medium, float tracking) {
   const juce::SharedResourcePointer<Typefaces> faces;
@@ -245,7 +245,7 @@ void setCompact(juce::Slider &slider) {
   slider.getProperties().set("compact", true);
 }
 
-EvilLookAndFeel::EvilLookAndFeel() {
+HeadroomLookAndFeel::HeadroomLookAndFeel() {
   using namespace colours;
   setDefaultSansSerifTypeface(typefaces->sans);
 
@@ -283,7 +283,7 @@ EvilLookAndFeel::EvilLookAndFeel() {
   refreshAccent();
 }
 
-void EvilLookAndFeel::refreshAccent() {
+void HeadroomLookAndFeel::refreshAccent() {
   setColour(juce::Slider::textBoxHighlightColourId, tint(0.32f));
   setColour(juce::TextButton::buttonOnColourId, tint(0.18f));
   setColour(juce::PopupMenu::highlightedBackgroundColourId, tint(0.28f));
@@ -292,10 +292,10 @@ void EvilLookAndFeel::refreshAccent() {
   setColour(juce::CaretComponent::caretColourId, colours::accent());
 }
 
-void EvilLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
-                                       int width, int height, float sliderPos,
-                                       float startAngle, float endAngle,
-                                       juce::Slider &slider) {
+void HeadroomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
+                                           int width, int height, float sliderPos,
+                                           float startAngle, float endAngle,
+                                           juce::Slider &slider) {
   using namespace colours;
   const auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat();
   const auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
@@ -357,11 +357,11 @@ void EvilLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
   g.drawLine(pointer, pointerWidth);
 }
 
-void EvilLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y,
-                                       int width, int height, float sliderPos,
-                                       float minSliderPos, float maxSliderPos,
-                                       juce::Slider::SliderStyle style,
-                                       juce::Slider &slider) {
+void HeadroomLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y,
+                                           int width, int height, float sliderPos,
+                                           float minSliderPos, float maxSliderPos,
+                                           juce::Slider::SliderStyle style,
+                                           juce::Slider &slider) {
   if (style == juce::Slider::LinearVertical) {
     drawFader(g, juce::Rectangle<int>(x, y, width, height).toFloat(), sliderPos,
               slider, faderCap);
@@ -385,9 +385,9 @@ void EvilLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y,
   g.fillRect(bounds.withRight(juce::jlimit(bounds.getX(), bounds.getRight(), sliderPos)));
 }
 
-void EvilLookAndFeel::drawToggleButton(juce::Graphics &g,
-                                       juce::ToggleButton &button,
-                                       bool highlighted, bool) {
+void HeadroomLookAndFeel::drawToggleButton(juce::Graphics &g,
+                                           juce::ToggleButton &button,
+                                           bool highlighted, bool) {
   using namespace colours;
   auto bounds = button.getLocalBounds().toFloat();
   const bool on = button.getToggleState();
@@ -432,10 +432,10 @@ void EvilLookAndFeel::drawToggleButton(juce::Graphics &g,
                    juce::Justification::centredLeft, 1);
 }
 
-void EvilLookAndFeel::drawButtonBackground(juce::Graphics &g,
-                                           juce::Button &button,
-                                           const juce::Colour &, bool highlighted,
-                                           bool down) {
+void HeadroomLookAndFeel::drawButtonBackground(juce::Graphics &g,
+                                               juce::Button &button,
+                                               const juce::Colour &, bool highlighted,
+                                               bool down) {
   using namespace colours;
   const auto bounds = button.getLocalBounds().toFloat().reduced(0.5f, 1.0f);
   const auto edge = black.withAlpha(0.9f);
@@ -470,9 +470,9 @@ void EvilLookAndFeel::drawButtonBackground(juce::Graphics &g,
   }
 }
 
-void EvilLookAndFeel::drawButtonText(juce::Graphics &g,
-                                     juce::TextButton &button, bool highlighted,
-                                     bool down) {
+void HeadroomLookAndFeel::drawButtonText(juce::Graphics &g,
+                                         juce::TextButton &button, bool highlighted,
+                                         bool down) {
   using namespace colours;
   const auto offset = down ? 1 : 0;
   if (isTab(button)) {
@@ -504,9 +504,9 @@ void EvilLookAndFeel::drawButtonText(juce::Graphics &g,
                    juce::Justification::centred, 1);
 }
 
-void EvilLookAndFeel::drawComboBox(juce::Graphics &g, int width, int height,
-                                   bool, int, int, int, int,
-                                   juce::ComboBox &box) {
+void HeadroomLookAndFeel::drawComboBox(juce::Graphics &g, int width, int height,
+                                       bool, int, int, int, int,
+                                       juce::ComboBox &box) {
   using namespace colours;
   const auto bounds = juce::Rectangle<int>(width, height).toFloat().reduced(0.0f, 0.5f);
   const bool hot = box.isEnabled() && box.isMouseOver(true);
@@ -532,17 +532,17 @@ void EvilLookAndFeel::drawComboBox(juce::Graphics &g, int width, int height,
                                            juce::PathStrokeType::rounded));
 }
 
-void EvilLookAndFeel::drawPopupMenuBackground(juce::Graphics &g, int width,
-                                              int height) {
+void HeadroomLookAndFeel::drawPopupMenuBackground(juce::Graphics &g, int width,
+                                                  int height) {
   g.fillAll(colours::panel.darker(0.25f));
   g.setColour(black);
   g.drawRect(0, 0, width, height, 1);
 }
 
-void EvilLookAndFeel::drawCallOutBoxBackground(juce::CallOutBox &,
-                                               juce::Graphics &g,
-                                               const juce::Path &path,
-                                               juce::Image &) {
+void HeadroomLookAndFeel::drawCallOutBoxBackground(juce::CallOutBox &,
+                                                   juce::Graphics &g,
+                                                   const juce::Path &path,
+                                                   juce::Image &) {
   juce::DropShadow(black.withAlpha(0.7f), 18, {0, 5}).drawForPath(g, path);
   g.setColour(colours::panel);
   g.fillPath(path);
@@ -550,9 +550,9 @@ void EvilLookAndFeel::drawCallOutBoxBackground(juce::CallOutBox &,
   g.strokePath(path, juce::PathStrokeType(1.0f));
 }
 
-void EvilLookAndFeel::drawCornerResizer(juce::Graphics &g, int w, int h,
-                                        bool isMouseOver,
-                                        bool isMouseDragging) {
+void HeadroomLookAndFeel::drawCornerResizer(juce::Graphics &g, int w, int h,
+                                            bool isMouseOver,
+                                            bool isMouseDragging) {
   g.setColour(isMouseDragging ? colours::accent()
               : isMouseOver   ? colours::muted
                               : colours::mutedSoft);
@@ -560,8 +560,8 @@ void EvilLookAndFeel::drawCornerResizer(juce::Graphics &g, int w, int h,
     g.drawLine((float)w * i, (float)h, (float)w, (float)h * i, 1.0f);
 }
 
-void EvilLookAndFeel::drawTooltip(juce::Graphics &g, const juce::String &text,
-                                  int width, int height) {
+void HeadroomLookAndFeel::drawTooltip(juce::Graphics &g, const juce::String &text,
+                                      int width, int height) {
   const auto bounds = juce::Rectangle<int>(width, height).toFloat();
   g.fillAll(colours::panel.darker(0.25f));
   g.setColour(black);
@@ -570,9 +570,9 @@ void EvilLookAndFeel::drawTooltip(juce::Graphics &g, const juce::String &text,
 }
 
 juce::Rectangle<int>
-EvilLookAndFeel::getTooltipBounds(const juce::String &text,
-                                  juce::Point<int> screenPos,
-                                  juce::Rectangle<int> parentArea) {
+HeadroomLookAndFeel::getTooltipBounds(const juce::String &text,
+                                      juce::Point<int> screenPos,
+                                      juce::Rectangle<int> parentArea) {
   const auto layout = layoutTooltip(text, colours::text);
   const int w = (int)std::ceil(layout.getWidth()) + 20;
   const int h = (int)std::ceil(layout.getHeight()) + 12;
@@ -586,29 +586,29 @@ EvilLookAndFeel::getTooltipBounds(const juce::String &text,
       .constrainedWithin(parentArea);
 }
 
-juce::Font EvilLookAndFeel::getTextButtonFont(juce::TextButton &, int) {
+juce::Font HeadroomLookAndFeel::getTextButtonFont(juce::TextButton &, int) {
   return silk(12.5f, 0.08f);
 }
 
-juce::Font EvilLookAndFeel::getComboBoxFont(juce::ComboBox &) {
+juce::Font HeadroomLookAndFeel::getComboBoxFont(juce::ComboBox &) {
   return readout(14.0f);
 }
 
-juce::Font EvilLookAndFeel::getPopupMenuFont() { return sans(14.5f, true); }
+juce::Font HeadroomLookAndFeel::getPopupMenuFont() { return sans(14.5f, true); }
 
-juce::Font EvilLookAndFeel::getLabelFont(juce::Label &label) {
+juce::Font HeadroomLookAndFeel::getLabelFont(juce::Label &label) {
   return label.getFont();
 }
 
-juce::Font EvilLookAndFeel::getAlertWindowTitleFont() {
+juce::Font HeadroomLookAndFeel::getAlertWindowTitleFont() {
   return display(22.0f);
 }
 
-juce::Font EvilLookAndFeel::getAlertWindowMessageFont() { return sans(14.5f); }
+juce::Font HeadroomLookAndFeel::getAlertWindowMessageFont() { return sans(14.5f); }
 
-juce::Font EvilLookAndFeel::getAlertWindowFont() { return silk(12.5f, 0.08f); }
+juce::Font HeadroomLookAndFeel::getAlertWindowFont() { return silk(12.5f, 0.08f); }
 
-juce::Label *EvilLookAndFeel::createSliderTextBox(juce::Slider &slider) {
+juce::Label *HeadroomLookAndFeel::createSliderTextBox(juce::Slider &slider) {
   auto *label = LookAndFeel_V4::createSliderTextBox(slider);
   const bool compact = slider.getProperties()["compact"];
   label->setFont(readout(compact ? 11.0f : 14.0f));
@@ -643,4 +643,4 @@ juce::Label *EvilLookAndFeel::createSliderTextBox(juce::Slider &slider) {
   };
   return label;
 }
-} // namespace evil::gui
+} // namespace headroom::gui

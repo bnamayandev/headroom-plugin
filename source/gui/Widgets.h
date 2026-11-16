@@ -9,7 +9,7 @@
 #include <array>
 #include <vector>
 
-namespace evil::gui {
+namespace headroom::gui {
 /** Has a slider ignore typed text with no number in it, which its parameter would
     read as 0: clearing the box shouldn't put an output at 0 dB. Call once the
     slider is attached. */
@@ -127,4 +127,4 @@ void styleAsText(juce::TextEditor &, const juce::Font &, juce::Colour);
 void styleLink(juce::HyperlinkButton &, float size = 13.0f);
 /** Field for pasting a key: shows that one's there without showing it. */
 void styleSecret(juce::TextEditor &);
-} // namespace evil::gui
+} // namespace headroom::gui

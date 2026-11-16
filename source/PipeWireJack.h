@@ -1,6 +1,6 @@
 #pragma once
 
-namespace evil::standalone {
+namespace headroom::standalone {
 /** Linux standalone on a PipeWire desktop: makes the audio settings' JACK
     entry go through PipeWire (no `pw-jack` needed) and lets its sample rate
     and buffer size menus actually change them. JUCE's own JACK backend can
@@ -12,4 +12,4 @@ namespace evil::standalone {
     Call from the processor's constructor, before the audio device opens. A
     no-op outside the Linux standalone. */
 void prepareAudioDevices();
-} // namespace evil::standalone
+} // namespace headroom::standalone

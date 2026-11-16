@@ -2,8 +2,8 @@
 <!-- Factory presets. Parameters not listed take their default value. Program 0 must match
      the plugin's default state. model="" plays with no model loaded: the amp passes clean. -->
 <FactoryPresets>
-  <Preset name="Neural HT-1" model="builtin:BlackstarHT1" ir="builtin:EvilCab4x12"/>
-  <Preset name="Neural HT-1 Tight" model="builtin:BlackstarHT1" ir="builtin:EvilCab4x12">
+  <Preset name="Neural HT-1" model="builtin:BlackstarHT1" ir="builtin:HeadroomCab4x12"/>
+  <Preset name="Neural HT-1 Tight" model="builtin:BlackstarHT1" ir="builtin:HeadroomCab4x12">
     <Param id="input" value="3"/>
     <Param id="gate_threshold" value="-60"/>
     <Param id="eq_50" value="-2.5"/>
@@ -15,21 +15,21 @@
     <Param id="eq_6k4" value="1"/>
     <Param id="eq_12k8" value="1"/>
   </Preset>
-  <Preset name="Clean DI + Cab" model="" ir="builtin:EvilCab4x12">
+  <Preset name="Clean DI + Cab" model="" ir="builtin:HeadroomCab4x12">
     <Param id="gate_on" value="0"/>
   </Preset>
-  <Preset name="Flat Bypass" model="" ir="builtin:EvilCab4x12">
+  <Preset name="Flat Bypass" model="" ir="builtin:HeadroomCab4x12">
     <Param id="gate_on" value="0"/>
     <Param id="cab_on" value="0"/>
   </Preset>
-  <Preset name="Screamer into HT-1" model="builtin:BlackstarHT1" ir="builtin:EvilCab4x12">
+  <Preset name="Screamer into HT-1" model="builtin:BlackstarHT1" ir="builtin:HeadroomCab4x12">
     <Param id="gate_threshold" value="-60"/>
     <Param id="od_on" value="1"/>
     <Param id="od_drive" value="0.2"/>
     <Param id="od_tone" value="0.55"/>
     <Param id="od_level" value="3.9"/>
   </Preset>
-  <Preset name="Fuzz Lead" model="builtin:BlackstarHT1" ir="builtin:EvilCab4x12">
+  <Preset name="Fuzz Lead" model="builtin:BlackstarHT1" ir="builtin:HeadroomCab4x12">
     <Param id="input" value="-3"/>
     <Param id="gate_threshold" value="-58"/>
     <Param id="fuzz_on" value="1"/>
@@ -46,7 +46,7 @@
     <Param id="reverb_on" value="1"/>
     <Param id="reverb_mix" value="0.2"/>
   </Preset>
-  <Preset name="Ambient Clean" model="" ir="builtin:EvilCab4x12">
+  <Preset name="Ambient Clean" model="" ir="builtin:HeadroomCab4x12">
     <Param id="gate_on" value="0"/>
     <Param id="comp_on" value="1"/>
     <Param id="comp_sustain" value="0.6"/>

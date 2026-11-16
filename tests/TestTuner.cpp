@@ -6,9 +6,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
-using namespace evil;
-using namespace evil::test;
-using namespace evil::tuning;
+using namespace headroom;
+using namespace headroom::test;
+using namespace headroom::tuning;
 
 namespace {
 constexpr double twoPi = 2.0 * juce::MathConstants<double>::pi;
@@ -314,7 +314,7 @@ TEST_CASE("A reading finds the closest string, or sticks to a locked one",
 
 TEST_CASE("Custom tunings persist, replace by name and leave built-ins alone",
           "[tuner]") {
-  const auto file = juce::File::createTempFile("evil-tunings.xml");
+  const auto file = juce::File::createTempFile("headroom-tunings.xml");
   file.deleteFile();
   const auto custom = strings("D4 B3 G3 Gb3 A2 E2");
   const auto numBuiltin = (int)builtinTunings().size();
@@ -365,7 +365,7 @@ TEST_CASE("Custom tunings persist, replace by name and leave built-ins alone",
 }
 
 TEST_CASE("A damaged tunings file costs only what's damaged", "[tuner]") {
-  const auto file = juce::File::createTempFile("evil-tunings.xml");
+  const auto file = juce::File::createTempFile("headroom-tunings.xml");
   const auto numBuiltin = builtinTunings().size();
 
   SECTION("not XML at all") {

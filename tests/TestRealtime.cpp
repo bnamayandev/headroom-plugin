@@ -4,13 +4,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-using namespace evil;
-using namespace evil::test;
+using namespace headroom;
+using namespace headroom::test;
 
 TEST_CASE("The audio path never allocates or frees, even while models, IRs "
           "and pedals are swapped",
           "[realtime]") {
-  const auto dir = juce::File::createTempFile("evil-rt");
+  const auto dir = juce::File::createTempFile("headroom-rt");
   dir.createDirectory();
   const auto altIr = dir.getChildFile("alt.wav");
   {
@@ -26,7 +26,7 @@ TEST_CASE("The audio path never allocates or frees, even while models, IRs "
   chain.setMatchingLevels(true); // as the plugin starts
   chain.prepare(48000.0, block);
   juce::String error;
-  REQUIRE(chain.getCab().load("builtin:EvilCab4x12", error));
+  REQUIRE(chain.getCab().load("builtin:HeadroomCab4x12", error));
   REQUIRE(chain.getModels().loadSynchronously("builtin:BlackstarHT1", error));
 
   SignalChain::Settings s;
@@ -42,7 +42,7 @@ TEST_CASE("The audio path never allocates or frees, even while models, IRs "
     if (b % 500 == 250)
       REQUIRE(chain.getCab().load((b / 500) % 2 == 0
                                       ? altIr.getFullPathName()
-                                      : juce::String("builtin:EvilCab4x12"),
+                                      : juce::String("builtin:HeadroomCab4x12"),
                                   error));
     if (b % 700 == 350)
       REQUIRE(chain.getModels().loadSynchronously(
@@ -114,7 +114,7 @@ TEST_CASE(
   chain.prepare(48000.0, block);
   juce::String error;
   REQUIRE(chain.getModels().loadSynchronously("builtin:BlackstarHT1", error));
-  REQUIRE(chain.getCab().load("builtin:EvilCab4x12", error));
+  REQUIRE(chain.getCab().load("builtin:HeadroomCab4x12", error));
   SignalChain::Settings s;
 
   auto x = sine(110.0, 48000.0, 48000 * 10, 0.2f);

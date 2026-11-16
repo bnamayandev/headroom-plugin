@@ -11,8 +11,8 @@
 
 #include <juce_dsp/juce_dsp.h>
 
-using namespace evil;
-using namespace evil::test;
+using namespace headroom;
+using namespace headroom::test;
 
 namespace {
 constexpr double rate = 48000.0;
@@ -1101,7 +1101,7 @@ TEST_CASE("The chime is quiet, soft at the start, and then gone", "[chime]") {
 namespace {
 /** Just enough of a processor to hold the plugin's parameters. */
 struct ParameterHost final : juce::AudioProcessor {
-  juce::AudioProcessorValueTreeState state{*this, nullptr, "EvilAmplifier",
+  juce::AudioProcessorValueTreeState state{*this, nullptr, "Headroom",
                                            params::createLayout()};
   const juce::String getName() const override { return "test"; }
   void prepareToPlay(double, int) override {}

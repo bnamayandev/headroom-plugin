@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace evil {
+namespace headroom {
 namespace {
 float coeffForTime(double sampleRate, double seconds) {
   return (float)(1.0 - std::exp(-1.0 / (seconds * sampleRate)));
@@ -693,4 +693,4 @@ void TremoloPedal::process(float *data, int n, const Settings &s) noexcept {
     data[i] *= 1.0f - depth.getNextValue() * 0.5f * (1.0f - wave);
   }
 }
-} // namespace evil
+} // namespace headroom

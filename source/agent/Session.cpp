@@ -1,6 +1,6 @@
 #include "Session.h"
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 void openInBrowser(const juce::URL &url) {
   juce::MessageManager::callAsync([url] { url.launchInDefaultBrowser(); });
@@ -93,7 +93,7 @@ juce::String carryOn(const juce::String &playerMessage, const std::vector<WorkDo
 
 Session::Session(AmpControl &a, AgentSettings &s, std::unique_ptr<HttpClient> client,
                  Tone3000::OpenBrowser opener)
-    : juce::Thread("Evil Amplifier agent"), amp(a), settings(s),
+    : juce::Thread("Headroom agent"), amp(a), settings(s),
       http(std::move(client)), customOpener(std::move(opener)),
       tone3000(*http, settings,
                [this](const juce::URL &url) {
@@ -587,4 +587,4 @@ void Session::runTurn(const juce::String &text) {
   if (finished && onAnswered != nullptr)
     onAnswered();
 }
-} // namespace evil::agent
+} // namespace headroom::agent

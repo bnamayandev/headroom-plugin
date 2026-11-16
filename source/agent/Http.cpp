@@ -2,7 +2,7 @@
 
 #include <array>
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 /** JUCE dereferences a null pointer if libcurl can't be loaded, so check first.
     The names are the ones JUCE's lazy loader tries. */
@@ -102,4 +102,4 @@ void WebHttpClient::setAborted(bool shouldAbort) {
   if (shouldAbort && current != nullptr)
     current->cancel();
 }
-} // namespace evil::agent
+} // namespace headroom::agent

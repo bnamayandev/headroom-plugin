@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace evil {
+namespace headroom {
 /** Power-of-two circular delay line. Sized once in setMaxDelay(); reads and
    writes never allocate. Delays count pushes back from the latest sample
    (delay 0 is the sample just pushed). */
@@ -70,4 +70,4 @@ public:
 private:
   int length = 480, position = 0;
 };
-} // namespace evil
+} // namespace headroom

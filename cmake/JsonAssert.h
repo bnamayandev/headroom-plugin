@@ -21,11 +21,11 @@
 #ifdef __cplusplus
 #include <stdexcept>
 
-namespace evil {
+namespace headroom {
 [[noreturn]] inline void jsonAssertFailed() {
   throw std::runtime_error("the file is missing a field it needs");
 }
-} // namespace evil
+} // namespace headroom
 
-#define JSON_ASSERT(x) ((x) ? static_cast<void>(0) : ::evil::jsonAssertFailed())
+#define JSON_ASSERT(x) ((x) ? static_cast<void>(0) : ::headroom::jsonAssertFailed())
 #endif

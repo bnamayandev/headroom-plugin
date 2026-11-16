@@ -10,7 +10,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
-namespace evil {
+namespace headroom {
 /** Everything the plugin does to the guitar signal, independent of the plugin
    wrapper so tests and the CLI run exactly the same code:
 
@@ -104,4 +104,4 @@ private:
   std::array<FootswitchFade, 12> footswitches;
   std::vector<float> scratch; // dry copy while a footswitch crossfades
 };
-} // namespace evil
+} // namespace headroom

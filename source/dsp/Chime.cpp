@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace evil {
+namespace headroom {
 namespace {
 struct Note {
   double start, frequency, amplitude, decaySeconds;
@@ -55,4 +55,4 @@ void Chime::process(float *const *channels, int numChannels, int n) noexcept {
       channels[ch][i] += value;
   }
 }
-} // namespace evil
+} // namespace headroom

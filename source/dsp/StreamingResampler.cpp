@@ -7,7 +7,7 @@
 #include <numbers>
 #include <numeric>
 
-namespace evil {
+namespace headroom {
 namespace {
 constexpr double zeroCrossings = 32.0; // per side, at the cutoff frequency
 constexpr double kaiserBeta = 9.0;     // ~90 dB stopband
@@ -129,4 +129,4 @@ int StreamingResampler::pop(float *output, int maxOutputs) noexcept {
   }
   return produced;
 }
-} // namespace evil
+} // namespace headroom

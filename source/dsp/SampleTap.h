@@ -5,7 +5,7 @@
 #include <array>
 #include <algorithm>
 
-namespace evil {
+namespace headroom {
 /** Lock-free single-producer, single-consumer sample queue from the audio
    thread to the GUI, e.g. for an analyser. Never blocks or allocates; when the
    reader falls behind (or no editor is open), new samples are dropped. */
@@ -32,4 +32,4 @@ private:
   juce::AbstractFifo fifo{capacity};
   std::array<float, (size_t)capacity> buffer{};
 };
-} // namespace evil
+} // namespace headroom

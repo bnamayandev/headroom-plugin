@@ -11,7 +11,7 @@ namespace nam {
 class DSP;
 }
 
-namespace evil {
+namespace headroom {
 /** What the GUI and logs show about a loaded model. */
 struct ModelInfo {
   juce::String source; // "builtin:<name>" or an absolute file path
@@ -92,4 +92,4 @@ private:
   std::vector<float> pending; // host-rate output not yet handed out
   int pendingCount = 0;
 };
-} // namespace evil
+} // namespace headroom

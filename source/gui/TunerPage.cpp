@@ -1,9 +1,9 @@
 #include "TunerPage.h"
 
-#include "EvilLookAndFeel.h"
+#include "HeadroomLookAndFeel.h"
 #include "Widgets.h"
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace {
 constexpr float gaugeCents = 50.0f;
 constexpr int rowInset = 14;
@@ -516,4 +516,4 @@ void TunerPage::paintStrings(juce::Graphics &g) {
   g.fillRect(headerArea.getX(), rows.back().bounds.getBottom(),
              headerArea.getWidth(), 1);
 }
-} // namespace evil::gui
+} // namespace headroom::gui

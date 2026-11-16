@@ -4,7 +4,7 @@
 
 #include <functional>
 
-namespace evil::gui {
+namespace headroom::gui {
 /** Keeps a static paint job in an image at the pixel scale it's drawn at, so
     grain, shadows and machined parts cost one paint rather than one per frame.
     It paints again if the size, the scale, the accent or the key changes. */
@@ -66,6 +66,8 @@ void drawVinyl(juce::Graphics &g, juce::Rectangle<int> bounds);
 
 /** The logo, chrome over the accent's glow, filling this height. */
 void drawLogo(juce::Graphics &g, juce::Point<float> topLeft, float height);
+/** How wide drawLogo() draws at this height. */
+float logoWidth(float height);
 
 /** Paints a knob's fixed parts, centred on `centre`, as lit from above: the
     shadow it throws, its fluted skirt and spun metal cap. */
@@ -99,4 +101,4 @@ private:
   PaintCache cone;
   bool active = true;
 };
-} // namespace evil::gui
+} // namespace headroom::gui

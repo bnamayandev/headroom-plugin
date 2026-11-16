@@ -3,11 +3,11 @@
 Two ways to give it data:
 
 1. Separate, already-aligned pairs (e.g. a published dataset):
-     python -m evilamp.train --train-input in.wav --train-target out.wav \
+     python -m headroom.train --train-input in.wav --train-target out.wav \
          --val-input v_in.wav --val-target v_out.wav --test-input t_in.wav --test-target t_out.wav ...
 
-2. One reamp of the signal made by `python -m evilamp.capture_signal` (your own capture):
-     python -m evilamp.train --capture-meta capture.json --capture-output recorded.wav ...
+2. One reamp of the signal made by `python -m headroom.capture_signal` (your own capture):
+     python -m headroom.train --capture-meta capture.json --capture-output recorded.wav ...
    The JSON sidecar marks the latency blips and the train/validation/test regions, so the
    latency is measured from the blips and the held-out region is never trained on.
 
@@ -165,7 +165,7 @@ def main(argv=None) -> None:
         g.add_argument(f"--{split}-input")
         g.add_argument(f"--{split}-target")
     g = p.add_argument_group("data (own capture)")
-    g.add_argument("--capture-meta", help="JSON written by evilamp.capture_signal")
+    g.add_argument("--capture-meta", help="JSON written by headroom.capture_signal")
     g.add_argument("--capture-input", help="override the signal file named in the JSON")
     g.add_argument("--capture-output", help="the device's recorded output")
     p.add_argument(
@@ -328,7 +328,7 @@ def main(argv=None) -> None:
         tone_type=args.tone_type,
         loudness=loudness,
         training={
-            "trainer": "evil-amplifier evilamp.train",
+            "trainer": "headroom headroom.train",
             "validation_esr": val_esr,
             "test_esr": test_esr,
             "best_epoch": best_epoch,

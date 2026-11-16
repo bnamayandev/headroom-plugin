@@ -7,7 +7,7 @@
 #include <functional>
 #include <optional>
 
-namespace evil::agent {
+namespace headroom::agent {
 struct ParameterInfo {
   juce::String id, name, label;
   juce::String text; // the value as the panel shows it
@@ -164,4 +164,4 @@ juce::String buildSystemPrompt(const AmpControl &);
 /** The amp right now, attached to each message so nothing goes stale when the
     player turns a knob: what's loaded, and every control not at its default. */
 juce::String describeAmpState(AmpControl &);
-} // namespace evil::agent
+} // namespace headroom::agent

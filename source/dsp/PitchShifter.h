@@ -7,7 +7,7 @@
 #include <optional>
 #include <vector>
 
-namespace evil {
+namespace headroom {
 /** Transposer: polyphonic delay-line pitch shifter with waveform-aligned
    splices, adding only as much delay as the signal needs.
 
@@ -63,4 +63,4 @@ private:
   float lastRatio = 1.0f;
   bool primed = false;
 };
-} // namespace evil
+} // namespace headroom

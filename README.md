@@ -1,11 +1,11 @@
-# Evil Amplifier
+# Headroom
 
 A real-time guitar amp simulator plugin (VST3, AU, standalone) that runs a neural network
 trained on recordings of a real amp. C++/JUCE for the real-time half, PyTorch for the offline
 half. It ships with a model of a **Blackstar HT-1 tube amp** trained by this project's
 trainer, and it loads any [Neural Amp Modeler](https://www.neuralampmodeler.com) `.nam` file.
 
-![Evil Amplifier](docs/screenshot.png)
+![Headroom](docs/screenshot.png)
 
 ```
 guitar ─► input gain ─► noise gate ─► transposer ─► compressor ─► fuzz ─► overdrive ─┐
@@ -24,7 +24,7 @@ reproducible with the commands shown.
 | Criterion (from the brief) | Target | Result |
 |---|---|---|
 | Host compatibility | pluginval strictness ≥ 5 | **Passes strictness 10**, all 25 test groups (VST3, Linux) |
-| CPU cost, 128 samples @ 48 kHz | < 25% of the deadline | **7.7% mean, 10.7% p99** for the full chain with the standard WaveNet (`evil-cli bench`) |
+| CPU cost, 128 samples @ 48 kHz | < 25% of the deadline | **7.7% mean, 10.7% p99** for the full chain with the standard WaveNet (`headroom-cli bench`) |
 | ... at 44.1 kHz host (resampled) | | 9.1% mean, 13.6% p99 |
 | Real-time stability | 0 dropouts in 30 min | 30 simulated minutes: **0 of 675,000 blocks over deadline**, worst block 26% (see [stability](#stability)) |
 | Nothing allocates on the audio thread | | **0 allocations, 0 frees** over 6,000 blocks with live model, IR and pedal swaps (malloc interposed) |
@@ -44,15 +44,18 @@ plugin where your DAW looks:
 
 | OS | VST3 | AU | Standalone |
 |---|---|---|---|
-| macOS | `~/Library/Audio/Plug-Ins/VST3/` | `~/Library/Audio/Plug-Ins/Components/` | `Evil Amplifier.app` anywhere |
-| Windows | `C:\Program Files\Common Files\VST3\` | n/a | `Evil Amplifier.exe` anywhere |
-| Linux | `~/.vst3/` | n/a | `Evil Amplifier` anywhere |
+| macOS | `~/Library/Audio/Plug-Ins/VST3/` | `~/Library/Audio/Plug-Ins/Components/` | `Headroom.app` anywhere |
+| Windows | `C:\Program Files\Common Files\VST3\` | n/a | `Headroom.exe` anywhere |
+| Linux | `~/.vst3/` | n/a | `Headroom` anywhere |
 
 - **Linux**: after building, `scripts/install-linux.sh` installs the VST3 to `~/.vst3`, the
-  standalone to `~/.local/bin/evil-amplifier` and an app-menu launcher (`--uninstall` removes them).
+  standalone to `~/.local/bin/headroom` and an app-menu launcher (`--uninstall` removes them).
 - **macOS**: CI builds are not code-signed. After copying, run
-  `xattr -dr com.apple.quarantine "~/Library/Audio/Plug-Ins/VST3/Evil Amplifier.vst3"` (and the
+  `xattr -dr com.apple.quarantine "~/Library/Audio/Plug-Ins/VST3/Headroom.vst3"` (and the
   same for the `.component` / `.app`), otherwise Gatekeeper blocks them.
+- **Upgrading from Evil Amplifier** (the amp's old name): remove the old `Evil Amplifier`
+  plugin and app first. Hosts see Headroom as the same plugin, so saved sessions open with
+  it, and presets, settings and API keys move to the new data folder the first time it runs.
 - **Standalone**: JUCE starts with the input muted (to avoid feedback through laptop
   speakers) and shows a yellow banner. Click its **Settings...** button, pick your interface,
   set the buffer to 128 samples, enable the input your guitar is plugged into, and untick
@@ -117,13 +120,13 @@ plugin where your DAW looks:
     the delay. *Reverb*: Dattorro plate. Delay and reverb add their wet signal on top of an
     unchanged dry signal.
   - All twelve pedals and the transposer together add ~7% of the block deadline
-    (`evil-cli bench --pedals all --transpose -2`), most of it the three drive pedals: about
+    (`headroom-cli bench --pedals all --transpose -2`), most of it the three drive pedals: about
     1.6% for the overdrive, 0.8% for the distortion and 3% for the fuzz.
 - **Tuner** (the *tuner* tab): pick a built-in tuning, or set any string to any note. String 1
   is the thinnest. Picking a note name takes the octave closest to that string's usual pitch,
   so string 1 to D is D4 and string 4 to Gb is Gb3; **-** and **+** move it an octave.
-  - **Save** keeps the notes under a name, in `tunings.xml` in `~/.config/EvilAmplifier/` (Linux),
-    `~/Library/EvilAmplifier/` (macOS) or `%APPDATA%\EvilAmplifier\` (Windows). Presets and
+  - **Save** keeps the notes under a name, in `tunings.xml` in `~/.config/Headroom/` (Linux),
+    `~/Library/Headroom/` (macOS) or `%APPDATA%\Headroom\` (Windows). Presets and
     sessions don't change your tuning or your saved tunings.
   - It works out which string you're playing. If a string is too far off for that, click its
     number to lock onto it: the meter then says how far to go, in semitones if need be.
@@ -139,8 +142,8 @@ plugin where your DAW looks:
   (each tap also restarts the bar), beats per bar (beat one clicks higher) and level. The
   click is mixed into the output. It always starts stopped.
 - **Presets**: nine factory presets (also exposed as host programs). **Save** writes user
-  presets to `~/.config/EvilAmplifier/Presets` (Linux), `~/Library/EvilAmplifier/Presets`
-  (macOS) or `%APPDATA%\EvilAmplifier\Presets` (Windows). Presets
+  presets to `~/.config/Headroom/Presets` (Linux), `~/Library/Headroom/Presets`
+  (macOS) or `%APPDATA%\Headroom\Presets` (Windows). Presets
   include the pedals but not the transposer or metronome settings, which stay as you set them.
   A saved preset is one file that carries its capture and IR and their credit, so it keeps its
   sound if the originals move or get deleted (one saved before this needs saving again). If a
@@ -148,8 +151,8 @@ plugin where your DAW looks:
   only point to the files. TONE3000's terms don't allow passing its catalog on, so don't share a
   preset that carries one of its captures.
 - **Log**: model loads, latency changes and CPU per block (every 30 s while playing) go to
-  `EvilAmplifier.log` in `~/.config/EvilAmplifier/` (Linux), `~/Library/Logs/EvilAmplifier/`
-  (macOS) or `%APPDATA%\EvilAmplifier\` (Windows).
+  `Headroom.log` in `~/.config/Headroom/` (Linux), `~/Library/Logs/Headroom/`
+  (macOS) or `%APPDATA%\Headroom\` (Windows).
 - The editor is resizable (fixed aspect ratio, 60% to 200%).
 
 ## The agent
@@ -166,7 +169,7 @@ already set, and its answer ends with a plan of what to stomp on when.
 
 It can't hear, so it measures: **measure_tone** plays a test guitar through a private copy of the amp
 and reports the spectrum, distortion and touch response (how much louder it gets when picked 12 dB
-harder), against the same setup with the pedals and EQ out of it. `evil-cli measure` shows the
+harder), against the same setup with the pedals and EQ out of it. `headroom-cli measure` shows the
 same reading for any setup. It takes knob positions as a guide gives them, by clock or 0-10, and
 starts each new tone by clearing what the last one left.
 
@@ -220,11 +223,11 @@ word by word, with a soft two-note chime in the output (about -24 dBFS) so you k
 watching. It doesn't chime when a turn is stopped or fails. Google's terms want its Search Suggestions shown with grounded answers; they arrive as
 HTML and this build has no web view, so they're shown as ordinary links.
 
-**Without a window:** `evil-cli agent "Make it creamier"` runs the same agent on a headless copy of
+**Without a window:** `headroom-cli agent "Make it creamier"` runs the same agent on a headless copy of
 the amp and prints what it did. It takes keys from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
 `GEMINI_API_KEY` and `TONE3000_PUBLISHABLE_KEY`, and doesn't save them. It shares the amp's
-TONE3000 sign-in: `evil-cli tone3000 connect` signs in by code from a terminal, even over SSH, and
-`evil-cli tone3000 status` checks it still works.
+TONE3000 sign-in: `headroom-cli tone3000 connect` signs in by code from a terminal, even over SSH, and
+`headroom-cli tone3000 status` checks it still works.
 
 ## Build
 
@@ -245,13 +248,13 @@ Windows builds include ASIO in the standalone's audio settings, using the ASIO S
 that ship with JUCE. Pick ASIO there for the full range of sample rates and buffer sizes your
 interface supports; plain "Windows Audio" only offers the system mixer's single rate and size.
 
-Outputs land in `build/EvilAmplifier_artefacts/Release/{VST3,AU,Standalone}/`. Add
-`-DEVIL_COPY_PLUGIN_AFTER_BUILD=ON` to install into your user plugin folders on every build.
+Outputs land in `build/Headroom_artefacts/Release/{VST3,AU,Standalone}/`. Add
+`-DHEADROOM_COPY_PLUGIN_AFTER_BUILD=ON` to install into your user plugin folders on every build.
 On macOS add `"-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"` for a universal binary. Always build
 Release to play: Eigen in a debug build is far too slow for real time.
 
 To publish a release: `git tag v0.1.0 && git push origin v0.1.0`. CI builds all three
-platforms and attaches `EvilAmplifier-{Windows,macOS,Linux}.zip` to a GitHub release.
+platforms and attaches `Headroom-{Windows,macOS,Linux}.zip` to a GitHub release.
 
 CI (`.github/workflows/ci.yml`) builds Linux, macOS (universal; VST3, AU, Standalone) and
 Windows on every push, runs the tests and pluginval at strictness 10 (VST3 everywhere, AU on
@@ -261,17 +264,17 @@ It also smoke-tests the training pipeline end to end.
 ## Test and measure
 
 ```bash
-build/tests/evil_tests_artefacts/Release/evil_tests          # 149 test cases
-pluginval --strictness-level 10 --validate-in-process "build/EvilAmplifier_artefacts/Release/VST3/Evil Amplifier.vst3"
+build/tests/headroom_tests_artefacts/Release/headroom_tests          # 149 test cases
+pluginval --strictness-level 10 --validate-in-process "build/Headroom_artefacts/Release/VST3/Headroom.vst3"
 
-cli=build/evil-cli_artefacts/Release/evil-cli
+cli=build/headroom-cli_artefacts/Release/headroom-cli
 $cli bench --seconds 60 --block 128 --rate 48000              # CPU per block vs deadline (--csv for every block)
 $cli esr test-in.wav test-target.wav --model my.nam            # held-out ESR through the plugin's C++ path
 $cli render guitar.wav out.wav --model my.nam --ir cab.wav     # offline render, latency compensated (--raw-levels: not normalised)
 $cli render guitar.wav out.wav --no-model --no-cab --pedals od --set od_drive=0.3,od_tone=0.6  # any knob, by id
 $cli info my.nam                                               # metadata, and the level it's normalised from
 $cli agent "Make it creamier" --provider anthropic             # the agent, with no window
-build/evil-snapshot_artefacts/Release/evil-snapshot shots/     # render the GUI to PNG, no window needed
+build/headroom-snapshot_artefacts/Release/headroom-snapshot shots/     # render the GUI to PNG, no window needed
 ```
 
 The tests cover:
@@ -317,7 +320,7 @@ The tests cover:
 
 ### Stability
 
-`evil-cli bench --seconds 1800` runs 30 minutes of guitar-like signal through the full chain
+`headroom-cli bench --seconds 1800` runs 30 minutes of guitar-like signal through the full chain
 in 128-sample blocks and records every block's time against its 2.67 ms deadline. Result:
 mean 7.4%, p99 8.7%, p99.9 12.6%, worst block 26.3%, **0 of 675,000 blocks late**. This
 measures compute headroom. It can't stand in for 30 minutes of playing through a real audio
@@ -330,9 +333,9 @@ See [`training/README.md`](training/README.md). In short:
 
 ```bash
 cd training && pip install -r requirements.txt
-python -m evilamp.capture_signal capture/ --di my_guitar_di.wav    # reamp signal + latency blips + held-out region
+python -m headroom.capture_signal capture/ --di my_guitar_di.wav    # reamp signal + latency blips + held-out region
 #   ...play capture/capture_input.wav through a reamp box into the amp, record its output at 48 kHz...
-python -m evilamp.train --capture-meta capture/capture.json --capture-output recorded.wav \
+python -m headroom.train --capture-meta capture/capture.json --capture-output recorded.wav \
     --delay auto --arch standard --out my_amp.nam --renders renders/
 ```
 
@@ -451,7 +454,7 @@ source/agent/      the chat: LLM providers, tools and their limits, TONE3000, HT
 source/            PluginProcessor, PluginEditor
 resources/         bundled model (+ training report), synthetic cab IR, factory presets, TONE3000 logos
 tests/             Catch2 suite, allocation tracker, parity data
-tools/             evil-cli (render, esr, bench, info, agent, measure), evil-snapshot (offscreen GUI render)
+tools/             headroom-cli (render, esr, bench, info, agent, measure), headroom-snapshot (offscreen GUI render)
 training/          PyTorch trainer, capture signal generator, IR generator, golden-data generator
 ```
 

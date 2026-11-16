@@ -5,7 +5,7 @@
 
 #include <functional>
 
-namespace evil::agent {
+namespace headroom::agent {
 /** TONE3000: where the NAM captures and IRs come from.
 
     TONE3000's free tier, which an open-source amp falls under, allows its OAuth
@@ -129,4 +129,4 @@ private:
   OpenBrowser openBrowser;
   ShowCode showCode;
 };
-} // namespace evil::agent
+} // namespace headroom::agent

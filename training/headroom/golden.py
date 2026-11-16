@@ -4,7 +4,7 @@ A small randomly initialised WaveNet is exported to .nam and run in PyTorch on a
 signal. The C++ test loads the same .nam through NeuralAmpModelerCore and must reproduce
 the PyTorch output, proving the exporter's weight layout matches NAM Core's.
 
-    python -m evilamp.golden ../tests/data
+    python -m headroom.golden ../tests/data
 """
 
 from __future__ import annotations

@@ -1,11 +1,12 @@
 #include "PresetManager.h"
 
-#include "EvilBinaryData.h"
+#include "DataDirectory.h"
+#include "HeadroomBinaryData.h"
 #include "Parameters.h"
 
 #include <juce_cryptography/juce_cryptography.h>
 
-namespace evil {
+namespace headroom {
 namespace {
 constexpr const char *presetTag = "Preset";
 constexpr const char *paramTag = "Param";
@@ -108,8 +109,8 @@ PresetManager::PresetManager(juce::AudioProcessorValueTreeState &s,
                              std::function<void(const Sources &)> set)
     : state(s), getSources(std::move(get)), applySources(std::move(set)) {
   if (auto xml = juce::parseXML(juce::String::createStringFromData(
-          EvilBinaryData::factory_presets_xml,
-          EvilBinaryData::factory_presets_xmlSize)))
+          HeadroomBinaryData::factory_presets_xml,
+          HeadroomBinaryData::factory_presets_xmlSize)))
     for (auto *preset : xml->getChildWithTagNameIterator(presetTag))
       factory.add(new juce::XmlElement(*preset));
 
@@ -120,10 +121,7 @@ PresetManager::PresetManager(juce::AudioProcessorValueTreeState &s,
 juce::File PresetManager::getUserPresetDirectory() {
   if (userPresetDirectoryOverride != juce::File())
     return userPresetDirectoryOverride;
-  return juce::File::getSpecialLocation(
-             juce::File::userApplicationDataDirectory)
-      .getChildFile("EvilAmplifier")
-      .getChildFile("Presets");
+  return getDataDirectory().getChildFile("Presets");
 }
 
 juce::File PresetManager::getSavedFilesDirectory() {
@@ -243,4 +241,4 @@ bool PresetManager::saveUserPreset(const juce::String &rawName, juce::String &er
   currentIndex = factory.size() + userFiles.indexOf(file);
   return true;
 }
-} // namespace evil
+} // namespace headroom

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace evil {
+namespace headroom {
 namespace {
 constexpr double minAnalysisRate = 20000.0, cutoffHz = 5000.0;
 constexpr double windowSeconds = 0.085; // over three cycles of the lowest note
@@ -149,4 +149,4 @@ double PitchDetector::track(double secondsSinceLast) {
   }
   return steady;
 }
-} // namespace evil
+} // namespace headroom

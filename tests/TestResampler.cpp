@@ -8,8 +8,8 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-using namespace evil;
-using namespace evil::test;
+using namespace headroom;
+using namespace headroom::test;
 
 namespace {
 std::vector<float> resampleAll(StreamingResampler &r,

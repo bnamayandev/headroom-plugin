@@ -5,7 +5,7 @@
 #include <atomic>
 #include <mutex>
 
-namespace evil::agent {
+namespace headroom::agent {
 /** One chat with the agent, for one plugin instance: the transcript, and the
     worker thread that runs the back and forth with the model.
 
@@ -67,9 +67,9 @@ public:
   /** Tokens the last turn used, since it's the player's money. */
   juce::String getLastUsage() const;
 
-  /** For evil-cli and the tests: blocks until idle or out of time. */
+  /** For headroom-cli and the tests: blocks until idle or out of time. */
   bool waitUntilIdle(int timeoutMs) const;
-  /** Fills the transcript without calling anything, for evil-snapshot. */
+  /** Fills the transcript without calling anything, for headroom-snapshot. */
   void showForSnapshot(std::vector<Entry>, Tone3000::SignInCode = {});
 
   static constexpr int maxStepsPerTurn = 24;
@@ -121,4 +121,4 @@ private:
   std::atomic<bool> busy{false}, cancelRequested{false}, resetRequested{false},
       interruptible{false};
 };
-} // namespace evil::agent
+} // namespace headroom::agent

@@ -14,11 +14,11 @@ for split in train val test; do
   done
 done
 
-python -m evilamp.train \
+python -m headroom.train \
   --train-input "$data/train-input.wav" --train-target "$data/train-target.wav" \
   --val-input "$data/val-input.wav" --val-target "$data/val-target.wav" \
   --test-input "$data/test-input.wav" --test-target "$data/test-target.wav" \
   --arch standard --epochs 200 \
   --out runs/ht1/BlackstarHT1.nam --renders runs/ht1/renders \
-  --name "Blackstar HT-1" --modeled-by "Evil Amplifier (Aalto HT-1 dataset)" \
+  --name "Blackstar HT-1" --modeled-by "Headroom (Aalto HT-1 dataset)" \
   --gear-type amp --gear-make Blackstar --gear-model "HT-1" "$@"

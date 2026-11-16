@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstring>
 
-namespace evil {
+namespace headroom {
 NamModelRunner::NamModelRunner(std::unique_ptr<nam::DSP> m, ModelInfo i)
     : model(std::move(m)), info(std::move(i)) {
   jassert(model != nullptr);
@@ -142,4 +142,4 @@ void NamModelRunner::process(const float *in, float *out, int n) noexcept {
   std::memmove(pending.data(), pending.data() + available,
                sizeof(float) * (size_t)pendingCount);
 }
-} // namespace evil
+} // namespace headroom

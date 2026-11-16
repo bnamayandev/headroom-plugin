@@ -5,8 +5,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-using namespace evil;
-using namespace evil::test;
+using namespace headroom;
+using namespace headroom::test;
 
 namespace {
 constexpr int block = 128;
@@ -19,7 +19,7 @@ constexpr const char *builtin = "builtin:BlackstarHT1";
 struct Captures {
   Captures() {
     dir.createDirectory();
-    const auto text = juce::File(EVIL_TEST_DATA_DIR)
+    const auto text = juce::File(HEADROOM_TEST_DATA_DIR)
                           .getChildFile("../../resources/models/BlackstarHT1.nam")
                           .loadFileAsString();
     // NAM takes a WaveNet's head scale from the last of its weights.
@@ -42,7 +42,7 @@ struct Captures {
   }
   ~Captures() { dir.deleteRecursively(); }
 
-  juce::File dir = juce::File::createTempFile("evil-levels");
+  juce::File dir = juce::File::createTempFile("headroom-levels");
   juce::File quiet, faint, other, bright;
 };
 
@@ -175,7 +175,7 @@ TEST_CASE("Captures measure their level as they load", "[levels]") {
 }
 
 TEST_CASE("The default rig plays the headroom quieter with levels matched", "[levels]") {
-  const Setup defaults{builtin, "builtin:EvilCab4x12"};
+  const Setup defaults{builtin, "builtin:HeadroomCab4x12"};
   const auto raw = levelOf(defaults, false);
   const auto matched = levelOf(defaults, true);
   INFO("raw " << raw << " dB, matched " << matched << " dB");
@@ -191,13 +191,13 @@ TEST_CASE("With levels matched every capture and IR plays at the same level",
   const auto other = captures.other.getFullPathName();
   const auto bright = captures.bright.getFullPathName();
   const std::vector<Setup> setups{
-      {builtin, "builtin:EvilCab4x12"},
-      {quiet, "builtin:EvilCab4x12"},
-      {other, "builtin:EvilCab4x12"},
+      {builtin, "builtin:HeadroomCab4x12"},
+      {quiet, "builtin:HeadroomCab4x12"},
+      {other, "builtin:HeadroomCab4x12"},
       {builtin, bright},
       {quiet, bright},
       {other, bright},
-      {builtin, "builtin:EvilCab4x12", false}, // the cabinet switched off
+      {builtin, "builtin:HeadroomCab4x12", false}, // the cabinet switched off
       {quiet, bright, false},
       {other, bright, false},
   };
@@ -225,7 +225,7 @@ TEST_CASE("Changing the IR after the capture keeps the level", "[levels]") {
   // The other way round to the plugin starting: the IR is matched to the capture
   // already playing.
   REQUIRE(chain.getModels().loadSynchronously(captures.other.getFullPathName(), error));
-  REQUIRE(chain.getCab().load("builtin:EvilCab4x12", error));
+  REQUIRE(chain.getCab().load("builtin:HeadroomCab4x12", error));
   CHECK(levelOf(chain, plain(true)) == Catch::Approx(loudness::targetDb).margin(0.1));
   REQUIRE(chain.getCab().load(captures.bright.getFullPathName(), error));
   CHECK(levelOf(chain, plain(true)) == Catch::Approx(loudness::targetDb).margin(0.1));
@@ -245,7 +245,7 @@ TEST_CASE("Swapping captures with levels matched doesn't jump in volume", "[leve
       chain.setMatchingLevels(true);
       chain.prepare(48000.0, block);
       juce::String error;
-      REQUIRE(chain.getCab().load("builtin:EvilCab4x12", error));
+      REQUIRE(chain.getCab().load("builtin:HeadroomCab4x12", error));
       REQUIRE(chain.getModels().loadSynchronously(builtin, error));
       const auto s = plain(cabOn);
       settle(chain, s);
@@ -294,7 +294,7 @@ TEST_CASE("Turning matching on and off dips rather than jumping", "[levels]") {
     SignalChain chain;
     chain.prepare(48000.0, block);
     juce::String error;
-    REQUIRE(chain.getCab().load("builtin:EvilCab4x12", error));
+    REQUIRE(chain.getCab().load("builtin:HeadroomCab4x12", error));
     REQUIRE(chain.getModels().loadSynchronously(captures.faint.getFullPathName(), error));
     const auto s = plain(cabOn);
     settle(chain, s);

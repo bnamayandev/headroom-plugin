@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <new>
 
-namespace evil::test {
+namespace headroom::test {
 namespace {
 // Constant-initialised, so touching it inside malloc never allocates.
 thread_local bool tracking = false;
@@ -52,7 +52,7 @@ bool interposesCAllocator() noexcept {
   return false;
 #endif
 }
-} // namespace evil::test
+} // namespace headroom::test
 
 #if defined(__GLIBC__)
 extern "C" {
@@ -63,37 +63,37 @@ void __libc_free(void *);
 void *__libc_memalign(size_t, size_t);
 
 void *malloc(size_t size) {
-  evil::test::countAllocation();
+  headroom::test::countAllocation();
   return __libc_malloc(size);
 }
 
 void *calloc(size_t n, size_t size) {
-  evil::test::countAllocation();
+  headroom::test::countAllocation();
   return __libc_calloc(n, size);
 }
 
 void *realloc(void *p, size_t size) {
-  evil::test::countAllocation();
+  headroom::test::countAllocation();
   return __libc_realloc(p, size);
 }
 
 void free(void *p) {
-  evil::test::countDeallocation(p);
+  headroom::test::countDeallocation(p);
   __libc_free(p);
 }
 
 void *memalign(size_t alignment, size_t size) {
-  evil::test::countAllocation();
+  headroom::test::countAllocation();
   return __libc_memalign(alignment, size);
 }
 
 void *aligned_alloc(size_t alignment, size_t size) {
-  evil::test::countAllocation();
+  headroom::test::countAllocation();
   return __libc_memalign(alignment, size);
 }
 
 int posix_memalign(void **out, size_t alignment, size_t size) {
-  evil::test::countAllocation();
+  headroom::test::countAllocation();
   void *p = __libc_memalign(alignment, size);
   if (p == nullptr)
     return 12; // ENOMEM
@@ -135,14 +135,14 @@ void operator delete[](void *p, std::size_t, std::align_val_t) noexcept {
 #else // Other platforms: count C++ allocations only.
 
 void *operator new(std::size_t size) {
-  evil::test::countAllocation();
+  headroom::test::countAllocation();
   if (void *p = std::malloc(size == 0 ? 1 : size))
     return p;
   throw std::bad_alloc();
 }
 void *operator new[](std::size_t size) { return operator new(size); }
 void operator delete(void *p) noexcept {
-  evil::test::countDeallocation(p);
+  headroom::test::countDeallocation(p);
   std::free(p);
 }
 void operator delete[](void *p) noexcept { operator delete(p); }

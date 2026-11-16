@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 juce::var stringProperty(const char *description) {
   return json::object({{"type", "string"}, {"description", description}});
@@ -696,4 +696,4 @@ juce::String describeAmpState(AmpControl &amp) {
         << ".]";
   return state;
 }
-} // namespace evil::agent
+} // namespace headroom::agent

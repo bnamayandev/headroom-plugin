@@ -6,7 +6,7 @@
 #include <utility>
 
 /** Small helpers for building JSON request bodies out of juce::var. */
-namespace evil::agent::json {
+namespace headroom::agent::json {
 inline juce::var object(
     std::initializer_list<std::pair<const char *, juce::var>> items = {}) {
   auto *o = new juce::DynamicObject();
@@ -33,4 +33,4 @@ inline juce::Array<juce::var> items(const juce::var &v) {
     return *a;
   return {};
 }
-} // namespace evil::agent::json
+} // namespace headroom::agent::json

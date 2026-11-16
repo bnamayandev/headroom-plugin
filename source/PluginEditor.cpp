@@ -2,8 +2,11 @@
 
 #include "StandaloneApp.h"
 
-namespace evil {
+namespace headroom {
 namespace {
+// The wordmark is long: at this height the header still has room for everything else.
+constexpr float logoHeight = 44.0f;
+
 void styleLabel(juce::Label &label, const juce::Font &font,
                 juce::Colour colour) {
   label.setFont(font);
@@ -24,7 +27,7 @@ juce::String formatEsr(double esr) {
 }
 } // namespace
 
-EvilAmplifierEditor::EvilAmplifierEditor(EvilAmplifierProcessor &p)
+HeadroomEditor::HeadroomEditor(HeadroomProcessor &p)
     : AudioProcessorEditor(p), audioProcessor(p), pedalBoard(p.getState()),
       agentPage(p.getAgent(), p.getAgentSettings()),
       inputKnob(p.getState(), params::input, "Gain"),
@@ -216,7 +219,7 @@ EvilAmplifierEditor::EvilAmplifierEditor(EvilAmplifierProcessor &p)
   startTimerHz(30);
 }
 
-EvilAmplifierEditor::~EvilAmplifierEditor() {
+HeadroomEditor::~HeadroomEditor() {
   stopTimer();
   if (keysPanel != nullptr) // its callout outlives us, but the processor may not
     keysPanel->detach();
@@ -225,11 +228,11 @@ EvilAmplifierEditor::~EvilAmplifierEditor() {
   setLookAndFeel(nullptr);
 }
 
-void EvilAmplifierEditor::paint(juce::Graphics &g) {
+void HeadroomEditor::paint(juce::Graphics &g) {
   g.fillAll(gui::colours::background); // behind any letterboxing
 }
 
-void EvilAmplifierEditor::resized() {
+void HeadroomEditor::resized() {
   const float scale = juce::jmin((float)getWidth() / designWidth,
                                  (float)getHeight() / designHeight);
   canvas.setBounds(0, 0, designWidth, designHeight);
@@ -238,7 +241,7 @@ void EvilAmplifierEditor::resized() {
       (getHeight() - designHeight * scale) * 0.5f));
 }
 
-void EvilAmplifierEditor::paintCanvas(juce::Graphics &g) {
+void HeadroomEditor::paintCanvas(juce::Graphics &g) {
   fixedParts.draw(g, canvas.getLocalBounds(), ampPage.isVisible() ? 1 : 0,
                   [this](juce::Graphics &c) { paintFixedParts(c); });
   paintBeatLights(g);
@@ -259,7 +262,7 @@ void EvilAmplifierEditor::paintCanvas(juce::Graphics &g) {
              juce::Justification::centredRight, false);
 }
 
-void EvilAmplifierEditor::paintFixedParts(juce::Graphics &g) {
+void HeadroomEditor::paintFixedParts(juce::Graphics &g) {
   using namespace gui::colours;
   const juce::Rectangle<int> design(designWidth, designHeight);
   gui::drawChassis(g, design);
@@ -272,7 +275,7 @@ void EvilAmplifierEditor::paintFixedParts(juce::Graphics &g) {
   g.fillRect(0, headerHeight, designWidth, 14);
   g.setColour(juce::Colours::white.withAlpha(0.13f));
   g.fillRect(0, headerHeight - 1, designWidth, 1);
-  gui::drawLogo(g, {18.0f, 7.0f}, 50.0f);
+  gui::drawLogo(g, {18.0f, 10.0f}, logoHeight);
   gui::drawRecess(g, tabTray.toFloat(), 4.0f);
 
   paintFooter(g);
@@ -310,12 +313,12 @@ void EvilAmplifierEditor::paintFixedParts(juce::Graphics &g) {
   g.drawText("NEURAL AMP MODEL", ampCaption, juce::Justification::centredLeft, false);
 }
 
-void EvilAmplifierEditor::layoutCanvas() {
+void HeadroomEditor::layoutCanvas() {
   const juce::Rectangle<int> design(designWidth, designHeight);
 
   // Header: logo, tabs in their tray, presets.
   auto header = design.withHeight(headerHeight).reduced(16, 0);
-  header.removeFromLeft(100);
+  header.removeFromLeft(juce::roundToInt(gui::logoWidth(logoHeight)) + 2);
   header.removeFromLeft(16);
   tabTray = header.removeFromLeft(298).withSizeKeepingCentre(298, 38);
   {
@@ -474,19 +477,19 @@ void EvilAmplifierEditor::layoutCanvas() {
   }
 }
 
-void EvilAmplifierEditor::canvasMouseDown(const juce::MouseEvent &e) {
+void HeadroomEditor::canvasMouseDown(const juce::MouseEvent &e) {
   // Bare header in the standalone app drags the window, as a title bar would.
   draggingWindow = isStandalone() && e.y < headerHeight;
   if (draggingWindow)
     windowDragger.startDraggingComponent(getTopLevelComponent(), e);
 }
 
-void EvilAmplifierEditor::canvasMouseDrag(const juce::MouseEvent &e) {
+void HeadroomEditor::canvasMouseDrag(const juce::MouseEvent &e) {
   if (draggingWindow)
     windowDragger.dragComponent(getTopLevelComponent(), e, nullptr);
 }
 
-void EvilAmplifierEditor::paintFooter(juce::Graphics &g) {
+void HeadroomEditor::paintFooter(juce::Graphics &g) {
   using namespace gui::colours;
   const auto strip = juce::Rectangle<int>(designWidth, designHeight)
                          .withTop(designHeight - footerHeight);
@@ -512,7 +515,7 @@ void EvilAmplifierEditor::paintFooter(juce::Graphics &g) {
              juce::Justification::centredLeft);
 }
 
-void EvilAmplifierEditor::paintBeatLights(juce::Graphics &g) {
+void HeadroomEditor::paintBeatLights(juce::Graphics &g) {
   using namespace gui::colours;
   // One light per beat; the current one flashes on its click, beat one in the
   // accent.
@@ -536,7 +539,7 @@ void EvilAmplifierEditor::paintBeatLights(juce::Graphics &g) {
   }
 }
 
-void EvilAmplifierEditor::timerCallback() {
+void HeadroomEditor::timerCallback() {
   constexpr float interval = 1.0f / 30.0f;
   inputMeter.pushPeak(audioProcessor.takeInputPeak(), interval);
   const float outputPeak = audioProcessor.takeOutputPeak();
@@ -584,7 +587,7 @@ void EvilAmplifierEditor::timerCallback() {
     canvas.repaint(gateLed.expanded(16.0f).getSmallestIntegerContainer());
 }
 
-void EvilAmplifierEditor::refreshAmpHardware(float outputPeak) {
+void HeadroomEditor::refreshAmpHardware(float outputPeak) {
   // The tubes follow the signal over the top of a guitar's range.
   const auto db = juce::Decibels::gainToDecibels(outputPeak, -100.0f);
   tubes.update(modelLive, juce::jmap(juce::jlimit(-42.0f, -3.0f, db), -42.0f, -3.0f, 0.0f, 1.0f));
@@ -596,7 +599,7 @@ void EvilAmplifierEditor::refreshAmpHardware(float outputPeak) {
   eqSpectrum.setBands(bands, (double)Equaliser::maxGainDb);
 }
 
-void EvilAmplifierEditor::showPage(int page) {
+void HeadroomEditor::showPage(int page) {
   page = juce::jlimit(0, 3, page);
   audioProcessor.editorPage = page;
   ampPage.setVisible(page == 0);
@@ -614,7 +617,7 @@ void EvilAmplifierEditor::showPage(int page) {
   canvas.repaint();
 }
 
-void EvilAmplifierEditor::refreshPedalsTab() {
+void HeadroomEditor::refreshPedalsTab() {
   // The count keeps engaged pedals visible from the amp page.
   const int active = pedalBoard.getNumActive();
   pedalsTab.setButtonText(
@@ -623,13 +626,13 @@ void EvilAmplifierEditor::refreshPedalsTab() {
                  : juce::String("pedals"));
 }
 
-void EvilAmplifierEditor::refreshMetronome() {
+void HeadroomEditor::refreshMetronome() {
   const bool running = audioProcessor.isMetronomeRunning();
   metronomeButton.setButtonText(running ? "stop" : "start");
   metronomeButton.setToggleState(running, juce::dontSendNotification);
 }
 
-void EvilAmplifierEditor::tapTempo() {
+void HeadroomEditor::tapTempo() {
   const double now = juce::Time::getMillisecondCounterHiRes();
   if (!tapTimes.empty() && now - tapTimes.back() > 2000.0)
     tapTimes.clear(); // a pause starts a new count
@@ -650,14 +653,14 @@ void EvilAmplifierEditor::tapTempo() {
   param->endChangeGesture();
 }
 
-void EvilAmplifierEditor::stepTranspose(int delta) {
+void HeadroomEditor::stepTranspose(int delta) {
   const int current = juce::roundToInt(
       audioProcessor.getState().getRawParameterValue(params::transpose)->load());
   transposeAttachment->setValueAsCompleteGesture((float)juce::jlimit(
       -PitchShifter::maxSemitones, PitchShifter::maxSemitones, current + delta));
 }
 
-void EvilAmplifierEditor::refreshStats() {
+void HeadroomEditor::refreshStats() {
   auto &cpu = audioProcessor.getCpuStats();
   cpuLabel.setText(juce::String::formatted(
                        "%.1f%% / %.1f%% peak", 100.0 * cpu.average.load(),
@@ -672,7 +675,7 @@ void EvilAmplifierEditor::refreshStats() {
       juce::dontSendNotification);
 }
 
-void EvilAmplifierEditor::changeListenerCallback(
+void HeadroomEditor::changeListenerCallback(
     juce::ChangeBroadcaster *source) {
   if (source == &settings.get())
     applyAccent();
@@ -680,7 +683,7 @@ void EvilAmplifierEditor::changeListenerCallback(
     refreshModelStatus();
 }
 
-void EvilAmplifierEditor::applyAccent() {
+void HeadroomEditor::applyAccent() {
   lookAndFeel.refreshAccent();
   sendLookAndFeelChange(); // slider value boxes take the new edit tint
   applyPresetColour();
@@ -691,11 +694,11 @@ void EvilAmplifierEditor::applyAccent() {
   repaint();
 }
 
-void EvilAmplifierEditor::applyPresetColour() {
+void HeadroomEditor::applyPresetColour() {
   presetBox.setColour(juce::ComboBox::textColourId, gui::colours::accent());
 }
 
-void EvilAmplifierEditor::refreshModelStatus() {
+void HeadroomEditor::refreshModelStatus() {
   using State = ModelManager::State;
   const auto status = audioProcessor.getModels().getStatus();
   if (const bool live = status.state == State::ready; live != modelLive) {
@@ -741,7 +744,7 @@ void EvilAmplifierEditor::refreshModelStatus() {
                                                       : gui::colours::textSoft);
 }
 
-void EvilAmplifierEditor::refreshIrStatus() {
+void HeadroomEditor::refreshIrStatus() {
   irName.setText(audioProcessor.getCab().getDisplayName(),
                  juce::dontSendNotification);
   const auto error = audioProcessor.getLastIrError();
@@ -760,7 +763,7 @@ void EvilAmplifierEditor::refreshIrStatus() {
                                                      : gui::colours::textSoft);
 }
 
-void EvilAmplifierEditor::refreshPresetList() {
+void HeadroomEditor::refreshPresetList() {
   auto &presets = audioProcessor.getPresets();
   presets.refreshUserPresets();
   presetBox.clear(juce::dontSendNotification);
@@ -774,7 +777,7 @@ void EvilAmplifierEditor::refreshPresetList() {
                                  juce::dontSendNotification);
 }
 
-void EvilAmplifierEditor::chooseModelFile() {
+void HeadroomEditor::chooseModelFile() {
   const auto start =
       lastModelDirectory.isDirectory()
           ? lastModelDirectory
@@ -792,7 +795,7 @@ void EvilAmplifierEditor::chooseModelFile() {
                        });
 }
 
-void EvilAmplifierEditor::chooseIrFile() {
+void HeadroomEditor::chooseIrFile() {
   const auto start =
       lastIrDirectory.isDirectory()
           ? lastIrDirectory
@@ -812,7 +815,7 @@ void EvilAmplifierEditor::chooseIrFile() {
                        });
 }
 
-void EvilAmplifierEditor::showBuiltinModels() {
+void HeadroomEditor::showBuiltinModels() {
   juce::PopupMenu menu;
   const auto names = ModelManager::getBuiltinNames();
   for (int i = 0; i < names.size(); ++i)
@@ -826,7 +829,7 @@ void EvilAmplifierEditor::showBuiltinModels() {
       });
 }
 
-void EvilAmplifierEditor::showBuiltinIrs() {
+void HeadroomEditor::showBuiltinIrs() {
   juce::PopupMenu menu;
   const auto names = CabSim::getBuiltinNames();
   for (int i = 0; i < names.size(); ++i)
@@ -842,7 +845,7 @@ void EvilAmplifierEditor::showBuiltinIrs() {
       });
 }
 
-void EvilAmplifierEditor::showSettings() {
+void HeadroomEditor::showSettings() {
   std::optional<gui::SettingsPanel::AppActions> app;
   if (isStandalone())
     app = gui::SettingsPanel::AppActions{
@@ -850,7 +853,7 @@ void EvilAmplifierEditor::showSettings() {
         standalone::loadState, standalone::resetToDefaultState};
   juce::CallOutBox::launchAsynchronously(
       std::make_unique<gui::SettingsPanel>(
-          [safe = juce::Component::SafePointer<EvilAmplifierEditor>(this)] {
+          [safe = juce::Component::SafePointer<HeadroomEditor>(this)] {
             if (safe != nullptr)
               safe->showKeys();
           },
@@ -858,7 +861,7 @@ void EvilAmplifierEditor::showSettings() {
       settingsButton.getBounds(), &canvas);
 }
 
-void EvilAmplifierEditor::showKeys() {
+void HeadroomEditor::showKeys() {
   auto keys = std::make_unique<gui::KeysPanel>(audioProcessor.getAgent(),
                                                audioProcessor.getAgentSettings());
   keysPanel = keys.get();
@@ -866,7 +869,7 @@ void EvilAmplifierEditor::showKeys() {
                                          &canvas);
 }
 
-void EvilAmplifierEditor::stepPreset(int delta) {
+void HeadroomEditor::stepPreset(int delta) {
   auto &presets = audioProcessor.getPresets();
   const int count = presets.getNames().size();
   if (count == 0)
@@ -876,7 +879,7 @@ void EvilAmplifierEditor::stepPreset(int delta) {
     presetBox.setSelectedItemIndex(index, juce::dontSendNotification);
 }
 
-void EvilAmplifierEditor::savePresetDialog() {
+void HeadroomEditor::savePresetDialog() {
   auto *window = new juce::AlertWindow(
       "Save preset",
       "Name your preset. It is saved, with its capture and IR, to\n" +
@@ -887,7 +890,7 @@ void EvilAmplifierEditor::savePresetDialog() {
   window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
   window->setLookAndFeel(&lookAndFeel);
 
-  juce::Component::SafePointer<EvilAmplifierEditor> safeThis(this);
+  juce::Component::SafePointer<HeadroomEditor> safeThis(this);
   window->enterModalState(
       true, juce::ModalCallbackFunction::create([safeThis, window](int result) {
         // Runs before the window is deleted (deleteWhenDismissed below).
@@ -907,4 +910,4 @@ void EvilAmplifierEditor::savePresetDialog() {
       }),
       true);
 }
-} // namespace evil
+} // namespace headroom

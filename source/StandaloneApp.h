@@ -1,6 +1,6 @@
 #pragma once
 
-namespace evil::standalone {
+namespace headroom::standalone {
 /** The standalone app's window has no title bar and no Options menu, so the
     editor offers what they did through these. All do nothing outside the app.
  */
@@ -12,4 +12,4 @@ void loadState();
 void resetToDefaultState();
 void minimiseWindow();
 void closeWindow();
-} // namespace evil::standalone
+} // namespace headroom::standalone

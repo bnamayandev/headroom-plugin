@@ -1,12 +1,12 @@
 """Generate a reamp test signal for capturing your own amp or pedal.
 
-    python -m evilamp.capture_signal capture/ --di my_guitar_di.wav
+    python -m headroom.capture_signal capture/ --di my_guitar_di.wav
 
 Writes capture/capture_input.wav (48 kHz, 24-bit) and capture/capture.json. Play the WAV
 out of your interface through a reamp box into the device, record the device's output on
 another input at the same sample rate (48 kHz), and train:
 
-    python -m evilamp.train --capture-meta capture/capture.json --capture-output recorded.wav \\
+    python -m headroom.train --capture-meta capture/capture.json --capture-output recorded.wav \\
         --out my_amp.nam --name "My amp" --gear-make ... --gear-model ...
 
 Layout of the signal:

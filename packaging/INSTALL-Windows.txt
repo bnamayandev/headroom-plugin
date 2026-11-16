@@ -1,10 +1,10 @@
-Evil Amplifier for Windows
-==========================
+Headroom for Windows
+====================
 
 Two ways to use it. You need Windows 10 or 11 (64-bit).
 
 1. Standalone app (no DAW needed)
-   - Double-click "Evil Amplifier.exe".
+   - Double-click "Headroom.exe".
    - Windows may say "Windows protected your PC" because the app isn't code-signed.
      Click "More info", then "Run anyway".
    - A yellow banner says the input is muted (to avoid feedback through speakers).
@@ -22,10 +22,10 @@ Two ways to use it. You need Windows 10 or 11 (64-bit).
    - Use headphones or studio monitors.
 
 2. Plugin in a DAW (Reaper, Ableton Live, FL Studio, Cubase, Studio One, Bitwig...)
-   - Copy the folder "Evil Amplifier.vst3" into
+   - Copy the folder "Headroom.vst3" into
          C:\Program Files\Common Files\VST3\
      (Windows will ask for administrator permission.)
-   - Rescan plugins in your DAW, then put "Evil Amplifier" on a mono track with your
+   - Rescan plugins in your DAW, then put "Headroom" on a mono track with your
      guitar input. Use your interface's ASIO driver in the DAW for the lowest latency.
 
 Using it
@@ -36,5 +36,11 @@ Using it
      Neural Amp Modeler capture (for example from tone3000.com).
    - Cabinet > "Load IR..." loads a cabinet impulse response (.wav).
 
-Presets you save go to %APPDATA%\EvilAmplifier\Presets.
-A log (useful for bug reports) is in %APPDATA%\EvilAmplifier\EvilAmplifier.log.
+Upgrading from Evil Amplifier (the amp's old name)
+   - Delete "Evil Amplifier.vst3" from C:\Program Files\Common Files\VST3\ and the old
+     "Evil Amplifier.exe". Your DAW sees Headroom as the same plugin, so saved sessions
+     open with it, and your presets, settings and API keys move across the first time it
+     runs.
+
+Presets you save go to %APPDATA%\Headroom\Presets.
+A log (useful for bug reports) is in %APPDATA%\Headroom\Headroom.log.

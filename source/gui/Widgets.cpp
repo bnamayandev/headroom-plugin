@@ -1,8 +1,8 @@
 #include "Widgets.h"
 
-#include "EvilLookAndFeel.h"
+#include "HeadroomLookAndFeel.h"
 
-namespace evil::gui {
+namespace headroom::gui {
 void ignoreTextWithoutNumber(juce::Slider &slider) {
   slider.valueFromTextFunction = [&slider, parse = slider.valueFromTextFunction](
                                      const juce::String &text) {
@@ -368,4 +368,4 @@ void styleSecret(juce::TextEditor &editor) {
   editor.setIndents(8, 0);
   editor.setSelectAllWhenFocused(true);
 }
-} // namespace evil::gui
+} // namespace headroom::gui

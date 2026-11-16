@@ -4,7 +4,7 @@
 #include <array>
 #include <cmath>
 
-namespace evil::analog {
+namespace headroom::analog {
 /** The drive pedals work in volts, using the component values of the circuits
    they model. Digital full scale is +12 dBu peak, a common level for reamping
    NAM captures, so a pedal hits a NAM amp about as hard as the real pedal would.
@@ -286,4 +286,4 @@ private:
   Halfband<8> upOuter{outerCoefficients}, downOuter{outerCoefficients};
   Halfband<4> upInner{innerCoefficients}, downInner{innerCoefficients};
 };
-} // namespace evil::analog
+} // namespace headroom::analog

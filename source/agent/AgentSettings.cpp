@@ -1,12 +1,14 @@
 #include "AgentSettings.h"
 
+#include "state/DataDirectory.h"
+
 #if !JUCE_WINDOWS
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 constexpr const char *rootTag = "AgentSettings";
 constexpr const char *valueTag = "Value";
@@ -55,10 +57,7 @@ bool writePrivately(const juce::File &file, const juce::String &text) {
 AgentSettings::AgentSettings() : file(getDefaultFile()) { load(); }
 
 juce::File AgentSettings::getDefaultFile() {
-  return juce::File::getSpecialLocation(
-             juce::File::userApplicationDataDirectory)
-      .getChildFile("EvilAmplifier")
-      .getChildFile("agent.xml");
+  return getDataDirectory().getChildFile("agent.xml");
 }
 
 void AgentSettings::useFile(const juce::File &newFile) {
@@ -193,4 +192,4 @@ juce::StringArray AgentSettings::suggestedModels(ProviderId id) {
   }
   return {};
 }
-} // namespace evil::agent
+} // namespace headroom::agent

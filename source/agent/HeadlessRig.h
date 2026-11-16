@@ -4,15 +4,15 @@
 #include "dsp/SignalChain.h"
 #include "state/Parameters.h"
 
-namespace evil::agent {
+namespace headroom::agent {
 /** The plugin's parameters, chain and presets with no audio or editor attached,
-    so evil-cli and the tests can run the agent against the real amp code. */
+    so headroom-cli and the tests can run the agent against the real amp code. */
 class HeadlessRig final : public juce::AudioProcessor {
 public:
   HeadlessRig()
       : AudioProcessor(BusesProperties().withOutput(
             "Output", juce::AudioChannelSet::stereo(), true)),
-        state(*this, nullptr, "EvilAmplifier", params::createLayout()),
+        state(*this, nullptr, "Headroom", params::createLayout()),
         presets(
             state,
             [this] {
@@ -65,4 +65,4 @@ private:
       chain.getCab().load(s.ir, error);
   }
 };
-} // namespace evil::agent
+} // namespace headroom::agent

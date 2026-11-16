@@ -5,7 +5,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace evil::gui {
+namespace headroom::gui {
 /** The API keys for the agent's three providers and the TONE3000 key with its
     sign-in, on a rack panel. It keeps itself in step with the settings and the
     session, so it can be shown anywhere (the settings popover opens it in a
@@ -49,4 +49,4 @@ private:
   PaintCache frame;
   bool secretKeyRefused = false, detached = false;
 };
-} // namespace evil::gui
+} // namespace headroom::gui

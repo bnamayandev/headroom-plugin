@@ -7,7 +7,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-namespace evil::agent {
+namespace headroom::agent {
 /** The real amp behind the agent's tools. The agent's worker thread calls this;
     anything that touches parameters or sources hops to the message thread, like
     a knob turned by hand, and nothing here goes near the audio thread. */
@@ -39,4 +39,4 @@ private:
   PresetManager &presets;
   LoadIr loadIrHook;
 };
-} // namespace evil::agent
+} // namespace headroom::agent

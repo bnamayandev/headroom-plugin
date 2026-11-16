@@ -9,7 +9,7 @@
 #include <mutex>
 #include <optional>
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 /** Runs fn on the message thread and waits for it. Gives up if this thread is
     told to exit, so a plugin closing while the agent works can't deadlock: the
@@ -99,9 +99,9 @@ float ProcessorAmp::valueAtPosition(const juce::String &id, float position) cons
 
 ToneReading ProcessorAmp::measureTone() {
   // The audio thread reads these same atomics; nothing here touches its chain.
-  return evil::agent::measureTone(params::Snapshot(state).read(),
-                                  models.getRequestedSource(), cab.getSource(),
-                                  models.isMatchingLevels());
+  return headroom::agent::measureTone(params::Snapshot(state).read(),
+                                      models.getRequestedSource(), cab.getSource(),
+                                      models.isMatchingLevels());
 }
 
 LoadedCapture ProcessorAmp::getModel() const {
@@ -195,4 +195,4 @@ void ProcessorAmp::restoreState(const juce::XmlElement &saved) {
   if (savedOutput.has_value())
     setParameter(params::output, *savedOutput);
 }
-} // namespace evil::agent
+} // namespace headroom::agent

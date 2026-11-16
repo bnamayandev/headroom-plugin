@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace evil {
+namespace headroom {
 SignalChain::SignalChain() {
   models.onModelChanging = [this](std::shared_ptr<const std::vector<float>> output) {
     cab.setLevelReference(std::move(output));
@@ -96,4 +96,4 @@ void SignalChain::processChunk(float *data, int n, const Settings &s) noexcept {
   footswitches[11].process(reverb, data, n, s.reverb, dry);
   outputGain.applyGain(data, n);
 }
-} // namespace evil
+} // namespace headroom

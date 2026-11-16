@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <dlfcn.h>
 
-namespace evil::standalone {
+namespace headroom::standalone {
 namespace {
 const juce::String jackTypeName = "JACK";
 
@@ -213,12 +213,12 @@ void prepareAudioDevices() {
   replacement->scanForDevices();
   devices.addAudioDeviceType(std::move(replacement));
 }
-} // namespace evil::standalone
+} // namespace headroom::standalone
 
 #else
 
-namespace evil::standalone {
+namespace headroom::standalone {
 void prepareAudioDevices() {}
-} // namespace evil::standalone
+} // namespace headroom::standalone
 
 #endif

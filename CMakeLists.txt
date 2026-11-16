@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.24) # 3.24: $<LINK_LIBRARY:WHOLE_ARCHIVE>
 # Must be set before project(). C++20 std::filesystem needs macOS 10.15; 11.0 covers arm64.
 set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
 
-project(EvilAmplifier VERSION 0.3.0 LANGUAGES C CXX)
+project(Headroom VERSION 0.3.0 LANGUAGES C CXX)
 
 # Windows: link the C++ runtime statically so users don't need the Visual C++ redistributable.
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -18,26 +18,28 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-option(EVIL_BUILD_TESTS "Build the Catch2 test suite" ON)
-option(EVIL_BUILD_TOOLS "Build the evil-cli render/benchmark tool" ON)
-option(EVIL_COPY_PLUGIN_AFTER_BUILD "Install plugins into the user plugin folders after building" OFF)
+option(HEADROOM_BUILD_TESTS "Build the Catch2 test suite" ON)
+option(HEADROOM_BUILD_TOOLS "Build the headroom-cli render/benchmark tool" ON)
+option(HEADROOM_COPY_PLUGIN_AFTER_BUILD "Install plugins into the user plugin folders after building" OFF)
 
 include(cmake/Dependencies.cmake)
 
 # --- Plugin -------------------------------------------------------------------------------
-set(EVIL_FORMATS VST3 Standalone)
+set(HEADROOM_FORMATS VST3 Standalone)
 if(APPLE)
-    list(APPEND EVIL_FORMATS AU)
+    list(APPEND HEADROOM_FORMATS AU)
 endif()
 
-juce_add_plugin(EvilAmplifier
-    PRODUCT_NAME "Evil Amplifier"
-    COMPANY_NAME "Evil Amplifier"
-    BUNDLE_ID com.evilamplifier.evilamplifier
+juce_add_plugin(Headroom
+    PRODUCT_NAME "Headroom"
+    COMPANY_NAME "Headroom"
+    BUNDLE_ID com.headroom.headroom
     VERSION ${PROJECT_VERSION}
+    # Hosts find the plugin in saved sessions by these codes, so they stay as they were
+    # when the amp was called Evil Amplifier.
     PLUGIN_MANUFACTURER_CODE Evla
     PLUGIN_CODE Evam
-    FORMATS ${EVIL_FORMATS}
+    FORMATS ${HEADROOM_FORMATS}
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
@@ -47,12 +49,12 @@ juce_add_plugin(EvilAmplifier
     VST3_CATEGORIES Fx Distortion
     AU_MAIN_TYPE kAudioUnitType_Effect
     MICROPHONE_PERMISSION_ENABLED TRUE
-    MICROPHONE_PERMISSION_TEXT "Evil Amplifier processes your guitar from the audio input."
-    COPY_PLUGIN_AFTER_BUILD ${EVIL_COPY_PLUGIN_AFTER_BUILD})
+    MICROPHONE_PERMISSION_TEXT "Headroom processes your guitar from the audio input."
+    COPY_PLUGIN_AFTER_BUILD ${HEADROOM_COPY_PLUGIN_AFTER_BUILD})
 
-juce_add_binary_data(EvilAmplifierData
-    HEADER_NAME EvilBinaryData.h
-    NAMESPACE EvilBinaryData
+juce_add_binary_data(HeadroomData
+    HEADER_NAME HeadroomBinaryData.h
+    NAMESPACE HeadroomBinaryData
     SOURCES
         resources/fonts/Barlow-Regular.ttf
         resources/fonts/Barlow-Medium.ttf
@@ -60,17 +62,17 @@ juce_add_binary_data(EvilAmplifierData
         resources/fonts/BarlowCondensed-ExtraBoldItalic.ttf
         resources/fonts/ShareTechMono-Regular.ttf
         resources/fonts/NewRocker-Regular.ttf
-        resources/irs/EvilCab4x12.wav
+        resources/irs/HeadroomCab4x12.wav
         resources/models/BlackstarHT1.nam
         resources/presets/factory_presets.xml
         resources/brand/TONE3000-logo.png
         resources/brand/T3K-mark.png)
-set_target_properties(EvilAmplifierData PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(HeadroomData PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # DSP + state code shared by the plugin, the tests and the CLI. An INTERFACE library so each
 # consumer compiles it with its own JUCE module configuration.
-add_library(evil_core INTERFACE)
-target_sources(evil_core INTERFACE
+add_library(headroom_core INTERFACE)
+target_sources(headroom_core INTERFACE
     source/agent/AgentSettings.cpp
     source/agent/Http.cpp
     source/agent/ProcessorAmp.cpp
@@ -92,15 +94,16 @@ target_sources(evil_core INTERFACE
     source/dsp/ReverbPedal.cpp
     source/dsp/SignalChain.cpp
     source/dsp/StreamingResampler.cpp
+    source/state/DataDirectory.cpp
     source/state/Parameters.cpp
     source/state/PresetManager.cpp
     source/state/Tunings.cpp)
-target_include_directories(evil_core INTERFACE source)
-target_link_libraries(evil_core INTERFACE
+target_include_directories(headroom_core INTERFACE source)
+target_link_libraries(headroom_core INTERFACE
     # NAM Core registers each architecture (WaveNet, LSTM, ...) from a static initialiser in
     # an otherwise unreferenced object file; a plain static link would drop them.
     "$<LINK_LIBRARY:WHOLE_ARCHIVE,nam_core>"
-    EvilAmplifierData
+    HeadroomData
     juce::juce_audio_utils
     juce::juce_cryptography # SHA-256 for the TONE3000 sign-in
     juce::juce_dsp)
@@ -108,7 +111,7 @@ target_link_libraries(evil_core INTERFACE
 # JUCE's built-in Linux sockets have no TLS, so the agent's HTTPS needs libcurl. It's loaded
 # when first used rather than linked, so a machine without it still runs the amp: the agent
 # tab says what's missing. Building needs the headers (libcurl4-openssl-dev).
-set(EVIL_JUCE_DEFINITIONS
+set(HEADROOM_JUCE_DEFINITIONS
     JUCE_WEB_BROWSER=0
     JUCE_LOAD_CURL_SYMBOLS_LAZILY=1
     JUCE_VST3_CAN_REPLACE_VST2=0
@@ -120,7 +123,7 @@ set(EVIL_JUCE_DEFINITIONS
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_path(JACK_INCLUDE_DIR jack/jack.h)
     if(JACK_INCLUDE_DIR)
-        list(APPEND EVIL_JUCE_DEFINITIONS JUCE_JACK=1 "JUCE_JACK_CLIENT_NAME=\"Evil Amplifier\"")
+        list(APPEND HEADROOM_JUCE_DEFINITIONS JUCE_JACK=1 "JUCE_JACK_CLIENT_NAME=\"Headroom\"")
         message(STATUS "JACK support: on")
     else()
         message(STATUS "JACK support: off (install libjack-jackd2-dev to enable)")
@@ -131,74 +134,74 @@ endif()
 # (GPLv3), so no separate download is needed. Without ASIO, Windows Audio (shared mode) only
 # offers the system mixer's single sample rate and buffer size.
 if(WIN32)
-    list(APPEND EVIL_JUCE_DEFINITIONS JUCE_ASIO=1)
+    list(APPEND HEADROOM_JUCE_DEFINITIONS JUCE_ASIO=1)
 endif()
 
-target_sources(EvilAmplifier PRIVATE
+target_sources(Headroom PRIVATE
     source/PluginProcessor.cpp
     source/PluginEditor.cpp
     source/PipeWireJack.cpp
     source/StandaloneApp.cpp
     source/gui/AgentPage.cpp
-    source/gui/EvilLookAndFeel.cpp
+    source/gui/HeadroomLookAndFeel.cpp
     source/gui/Hardware.cpp
     source/gui/KeysPanel.cpp
     source/gui/PedalBoard.cpp
     source/gui/Settings.cpp
     source/gui/TunerPage.cpp
     source/gui/Widgets.cpp)
-target_compile_definitions(EvilAmplifier PUBLIC
-    ${EVIL_JUCE_DEFINITIONS}
+target_compile_definitions(Headroom PUBLIC
+    ${HEADROOM_JUCE_DEFINITIONS}
     JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1) # source/StandaloneApp.cpp: no title bar
-target_link_libraries(EvilAmplifier
+target_link_libraries(Headroom
     PRIVATE
-        evil_core
+        headroom_core
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
 # --- Tests ----------------------------------------------------------------------------------
-if(EVIL_BUILD_TESTS)
+if(HEADROOM_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
 # --- CLI: offline render, CPU benchmark, model/IR checks -------------------------------------
-if(EVIL_BUILD_TOOLS)
-    juce_add_console_app(evil-cli PRODUCT_NAME "evil-cli" NEEDS_CURL TRUE)
-    target_sources(evil-cli PRIVATE tools/evil_cli.cpp)
-    target_compile_definitions(evil-cli PRIVATE ${EVIL_JUCE_DEFINITIONS})
-    target_link_libraries(evil-cli
+if(HEADROOM_BUILD_TOOLS)
+    juce_add_console_app(headroom-cli PRODUCT_NAME "headroom-cli" NEEDS_CURL TRUE)
+    target_sources(headroom-cli PRIVATE tools/headroom_cli.cpp)
+    target_compile_definitions(headroom-cli PRIVATE ${HEADROOM_JUCE_DEFINITIONS})
+    target_link_libraries(headroom-cli
         PRIVATE
-            evil_core
+            headroom_core
         PUBLIC
             juce::juce_recommended_config_flags
             juce::juce_recommended_warning_flags)
 
     # Renders the editor offscreen to PNG (docs, CI artefacts, layout checks).
-    juce_add_console_app(evil-snapshot PRODUCT_NAME "evil-snapshot" NEEDS_CURL TRUE)
-    target_sources(evil-snapshot PRIVATE
-        tools/evil_snapshot.cpp
+    juce_add_console_app(headroom-snapshot PRODUCT_NAME "headroom-snapshot" NEEDS_CURL TRUE)
+    target_sources(headroom-snapshot PRIVATE
+        tools/headroom_snapshot.cpp
         source/PluginProcessor.cpp
         source/PluginEditor.cpp
         source/PipeWireJack.cpp
         source/StandaloneApp.cpp
         source/gui/AgentPage.cpp
-        source/gui/EvilLookAndFeel.cpp
+        source/gui/HeadroomLookAndFeel.cpp
         source/gui/Hardware.cpp
         source/gui/KeysPanel.cpp
         source/gui/PedalBoard.cpp
         source/gui/Settings.cpp
         source/gui/TunerPage.cpp
         source/gui/Widgets.cpp)
-    target_compile_definitions(evil-snapshot PRIVATE
-        ${EVIL_JUCE_DEFINITIONS}
-        JucePlugin_Name="Evil Amplifier"
+    target_compile_definitions(headroom-snapshot PRIVATE
+        ${HEADROOM_JUCE_DEFINITIONS}
+        JucePlugin_Name="Headroom"
         JucePlugin_VersionString="${PROJECT_VERSION}")
-    target_link_libraries(evil-snapshot
+    target_link_libraries(headroom-snapshot
         PRIVATE
-            evil_core
+            headroom_core
         PUBLIC
             juce::juce_recommended_config_flags)
 endif()

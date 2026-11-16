@@ -8,7 +8,7 @@
 
 #include <array>
 
-namespace evil::gui {
+namespace headroom::gui {
 /** The tuner page: the meter on the left, and on the right the tuning it tunes
     to, one note per string, with the built-in and saved tunings to start from.
 
@@ -28,7 +28,7 @@ public:
   /** Forgets what it heard, e.g. when the page comes back into view. */
   void reset();
 
-  /** Shows these notes without saving them, for evil-snapshot. */
+  /** Shows these notes without saving them, for headroom-snapshot. */
   void showStrings(const tuning::Strings &);
 
 private:
@@ -70,4 +70,4 @@ private:
       hintArea, gaugeWell, gaugeArea, statsArea, headerArea, footHintArea;
   PaintCache frame, noteCache;
 };
-} // namespace evil::gui
+} // namespace headroom::gui

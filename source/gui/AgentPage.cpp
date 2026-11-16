@@ -1,10 +1,10 @@
 #include "AgentPage.h"
 
-#include "EvilBinaryData.h"
-#include "EvilLookAndFeel.h"
+#include "HeadroomBinaryData.h"
+#include "HeadroomLookAndFeel.h"
 #include "Widgets.h"
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace {
 using Entry = agent::Session::Entry;
 using agent::AgentSettings;
@@ -270,12 +270,12 @@ AgentPage::AgentPage(agent::Session &s, agent::AgentSettings &a)
     session.browseTone3000();
   };
 
-  tone3000Logo.setImage(brandImage(EvilBinaryData::TONE3000logo_png,
-                                   EvilBinaryData::TONE3000logo_pngSize),
+  tone3000Logo.setImage(brandImage(HeadroomBinaryData::TONE3000logo_png,
+                                   HeadroomBinaryData::TONE3000logo_pngSize),
                         juce::RectanglePlacement::centred);
   tone3000Logo.setInterceptsMouseClicks(false, false);
   addAndMakeVisible(tone3000Logo);
-  t3kMark.setImage(brandImage(EvilBinaryData::T3Kmark_png, EvilBinaryData::T3Kmark_pngSize),
+  t3kMark.setImage(brandImage(HeadroomBinaryData::T3Kmark_png, HeadroomBinaryData::T3Kmark_pngSize),
                    juce::RectanglePlacement::centred);
   t3kMark.setInterceptsMouseClicks(false, false);
   addAndMakeVisible(t3kMark);
@@ -499,4 +499,4 @@ void AgentPage::changeListenerCallback(juce::ChangeBroadcaster *source) {
     viewport.setViewPosition(0, transcript->getHeight());
   refresh();
 }
-} // namespace evil::gui
+} // namespace headroom::gui

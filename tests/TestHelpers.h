@@ -5,9 +5,9 @@
 #include <cmath>
 #include <vector>
 
-namespace evil::test {
+namespace headroom::test {
 inline juce::File dataFile(const char *name) {
-  return juce::File(EVIL_TEST_DATA_DIR).getChildFile(name);
+  return juce::File(HEADROOM_TEST_DATA_DIR).getChildFile(name);
 }
 
 inline std::vector<float> readWav(const juce::File &file,
@@ -83,4 +83,4 @@ inline double toneAmplitude(const float *x, int n, double freq,
   }
   return 2.0 * std::sqrt(s * s + c * c) / n;
 }
-} // namespace evil::test
+} // namespace headroom::test

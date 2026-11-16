@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cstdint>
 
-namespace evil {
+namespace headroom {
 /** Click track mixed into the output. Beat one of each bar clicks higher.
    Tempo changes take effect smoothly: the position is kept in beats, so a new
    tempo just changes how fast it advances. */
@@ -43,4 +43,4 @@ private:
   std::atomic<int> beatInBarForGui{-1};
   std::atomic<std::uint32_t> clickCount{0};
 };
-} // namespace evil
+} // namespace headroom

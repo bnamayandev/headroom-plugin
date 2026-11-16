@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace evil {
+namespace headroom {
 /** Streaming band-limited resampler for an arbitrary (rational) rate ratio.
 
     Each output sample j represents input time j * inRate / outRate exactly and
@@ -56,4 +56,4 @@ private:
   std::int64_t phaseNum =
       0; // fractional part of that time, in units of 1/stepDen
 };
-} // namespace evil
+} // namespace headroom

@@ -6,7 +6,7 @@
 #include <mutex>
 #include <vector>
 
-namespace evil {
+namespace headroom {
 /** Cabinet simulation: zero-latency partitioned convolution with an impulse
    response.
 
@@ -77,4 +77,4 @@ private:
   bool matching = false;
   float matchGainDb = 0.0f;
 };
-} // namespace evil
+} // namespace headroom

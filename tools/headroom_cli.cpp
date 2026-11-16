@@ -1,20 +1,20 @@
-// evil-cli: run the plugin's exact signal chain offline.
+// headroom-cli: run the plugin's exact signal chain offline.
 //
-//   evil-cli render <in.wav> <out.wav> [chain options]
-//   evil-cli esr    <in.wav> <target.wav> --model <m.nam>   [--block N] [--out
-//   prediction.wav] evil-cli bench  [--seconds S] [--block N] [--rate R] [--csv
-//   file] [chain options] evil-cli info   <m.nam> evil-cli devices (audio
+//   headroom-cli render <in.wav> <out.wav> [chain options]
+//   headroom-cli esr    <in.wav> <target.wav> --model <m.nam>   [--block N] [--out
+//   prediction.wav] headroom-cli bench  [--seconds S] [--block N] [--rate R] [--csv
+//   file] [chain options] headroom-cli info   <m.nam> headroom-cli devices (audio
 //   device types and devices this build can open)
-//   evil-cli agent  "<message>" ["<next message>" ...] [--provider anthropic|
+//   headroom-cli agent  "<message>" ["<next message>" ...] [--provider anthropic|
 //   openai|gemini] [--model M] (talks to the agent with no window, and prints
 //   what it did. Keys come from ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY
 //   and TONE3000_PUBLISHABLE_KEY, else from what the agent tab saved. Spends the
 //   account's money. It never opens a browser: if it needs you to sign in to
 //   TONE3000, it prints a code to enter on any device. --base-url sends model
 //   requests to a local stand-in instead.)
-//   evil-cli measure [chain options] (what the agent's measure_tone reads for this
+//   headroom-cli measure [chain options] (what the agent's measure_tone reads for this
 //   setup)
-//   evil-cli tone3000 status|connect|disconnect (the TONE3000 sign-in the agent
+//   headroom-cli tone3000 status|connect|disconnect (the TONE3000 sign-in the agent
 //   shares with the amp. connect prints a code to enter on any device.)
 //
 // Chain options:
@@ -51,7 +51,7 @@
 #include <optional>
 
 namespace {
-using evil::SignalChain;
+using headroom::SignalChain;
 
 struct Options {
   std::vector<juce::String> positional;
@@ -198,7 +198,7 @@ void setUp(SignalChain &chain, const Options &o, double sampleRate, int block,
   chain.setMatchingLevels(!o.has("--raw-levels"));
   chain.prepare(sampleRate, block);
   juce::String error;
-  if (!chain.getCab().load(o.get("--ir", "builtin:EvilCab4x12"), error))
+  if (!chain.getCab().load(o.get("--ir", "builtin:HeadroomCab4x12"), error))
     fail(error);
   if (!o.has("--no-model") &&
       !chain.getModels().loadSynchronously(
@@ -228,7 +228,7 @@ std::vector<float> run(SignalChain &chain, const float *in, int n, int block,
 
 int render(const Options &o) {
   if (o.positional.size() != 2)
-    fail("usage: evil-cli render <in.wav> <out.wav> [options]");
+    fail("usage: headroom-cli render <in.wav> <out.wav> [options]");
   const auto in = readMono(o.positional[0]);
   const int block = o.get("--block", "128").getIntValue();
   const auto s = settingsFrom(o);
@@ -245,7 +245,7 @@ int render(const Options &o) {
 
 int esr(const Options &o) {
   if (o.positional.size() != 2)
-    fail("usage: evil-cli esr <in.wav> <target.wav> --model <m.nam>");
+    fail("usage: headroom-cli esr <in.wav> <target.wav> --model <m.nam>");
   const auto in = readMono(o.positional[0]);
   const auto target = readMono(o.positional[1]);
   if (!juce::exactlyEqual(in.sampleRate, target.sampleRate))
@@ -380,8 +380,8 @@ int devices() {
 
 int info(const Options &o) {
   if (o.positional.size() != 1)
-    fail("usage: evil-cli info <model.nam|builtin:Name>");
-  evil::ModelManager models;
+    fail("usage: headroom-cli info <model.nam|builtin:Name>");
+  headroom::ModelManager models;
   juce::String error;
   if (!models.loadSynchronously(o.positional[0], error))
     fail(error);
@@ -395,7 +395,7 @@ int info(const Options &o) {
       i.hasLoudness ? (juce::String(i.loudnessDb, 2) + " dB (the file's)").toRawUTF8()
                     : "unknown",
       i.hasLevel ? (juce::String(i.levelDb, 2) + " dB, matched by " +
-                    juce::String(evil::loudness::targetDb - i.levelDb, 1) + " dB")
+                    juce::String(headroom::loudness::targetDb - i.levelDb, 1) + " dB")
                        .toRawUTF8()
                  : "unknown",
       i.validationEsr >= 0 ? juce::String(i.validationEsr, 5).toRawUTF8()
@@ -409,7 +409,7 @@ int info(const Options &o) {
     the message loop the amp's parameter changes run on. */
 class AgentRun final : private juce::Timer {
 public:
-  AgentRun(evil::agent::Session &s, std::vector<juce::String> m)
+  AgentRun(headroom::agent::Session &s, std::vector<juce::String> m)
       : session(s), messages(std::move(m)) {
     startTimer(50);
   }
@@ -417,7 +417,7 @@ public:
 
 private:
   void timerCallback() override {
-    using Kind = evil::agent::Session::Entry::Kind;
+    using Kind = headroom::agent::Session::Entry::Kind;
     const auto entries = session.getEntries();
     for (; printed < entries.size(); ++printed) {
       const auto &entry = entries[printed];
@@ -443,16 +443,16 @@ private:
     juce::MessageManager::getInstance()->stopDispatchLoop();
   }
 
-  evil::agent::Session &session;
+  headroom::agent::Session &session;
   std::vector<juce::String> messages;
   size_t printed = 0, next = 0;
 };
 
 int commandAgent(const Options &options) {
-  using evil::agent::AgentSettings;
-  using evil::agent::ProviderId;
+  using headroom::agent::AgentSettings;
+  using headroom::agent::ProviderId;
   if (options.positional.empty())
-    fail("usage: evil-cli agent \"<message>\" [--provider P] [--model M]");
+    fail("usage: headroom-cli agent \"<message>\" [--provider P] [--model M]");
 
   juce::SharedResourcePointer<AgentSettings> settings;
 
@@ -495,18 +495,18 @@ int commandAgent(const Options &options) {
   std::cout << "agent: " << AgentSettings::providerName(provider) << ", "
             << settings->getModel(provider) << std::endl;
 
-  evil::agent::HeadlessRig rig;
+  headroom::agent::HeadlessRig rig;
   juce::String error;
-  if (!rig.chain.getModels().loadSynchronously(evil::params::defaultModelSource, error))
+  if (!rig.chain.getModels().loadSynchronously(headroom::params::defaultModelSource, error))
     fail(error);
   bool hadError = false;
   {
-    evil::agent::Session session(rig.amp, settings.get(),
-                                 std::make_unique<evil::agent::WebHttpClient>());
+    headroom::agent::Session session(rig.amp, settings.get(),
+                                     std::make_unique<headroom::agent::WebHttpClient>());
     AgentRun run(session, options.positional);
     juce::MessageManager::getInstance()->runDispatchLoop();
     hadError = run.hadError;
-    std::cout << "\n" << evil::agent::describeAmpState(rig.amp) << std::endl;
+    std::cout << "\n" << headroom::agent::describeAmpState(rig.amp) << std::endl;
     std::cout << session.getLastUsage() << std::endl;
   }
   return hadError ? 1 : 0;
@@ -516,9 +516,9 @@ int commandMeasure(const Options &options) {
   const auto model = options.has("--no-model")
                          ? juce::String()
                          : options.get("--model", "builtin:BlackstarHT1");
-  const auto r = evil::agent::measureTone(settingsFrom(options), model,
-                                          options.get("--ir", "builtin:EvilCab4x12"),
-                                          !options.has("--raw-levels"));
+  const auto r = headroom::agent::measureTone(settingsFrom(options), model,
+                                              options.get("--ir", "builtin:HeadroomCab4x12"),
+                                              !options.has("--raw-levels"));
   if (r.error.isNotEmpty())
     fail(r.error);
   printf("level %6.1f dB (alone %6.1f) | touch %5.1f dB (alone %5.1f) | distortion gentle "
@@ -534,7 +534,7 @@ int commandMeasure(const Options &options) {
       printf("    --");
   printf("\n  shape:         ");
   for (size_t b = 0; b < r.bandDb.size(); ++b)
-    if (r.bandDb[b] < evil::agent::ToneReading::emptyBandDb)
+    if (r.bandDb[b] < headroom::agent::ToneReading::emptyBandDb)
       printf("    --");
     else
       printf(" %+5.1f", r.bandDb[b]);
@@ -543,8 +543,8 @@ int commandMeasure(const Options &options) {
 }
 
 int commandTone3000(const Options &options) {
-  using evil::agent::AgentSettings;
-  using evil::agent::Tone3000;
+  using headroom::agent::AgentSettings;
+  using headroom::agent::Tone3000;
   const auto action = options.positional.empty() ? juce::String("status")
                                                  : options.positional[0];
   juce::SharedResourcePointer<AgentSettings> settings;
@@ -553,7 +553,7 @@ int commandTone3000(const Options &options) {
   if (key.isNotEmpty())
     settings->setForThisRun(AgentSettings::tone3000Key, key);
 
-  evil::agent::WebHttpClient http;
+  headroom::agent::WebHttpClient http;
   Tone3000 tone3000(
       http, settings.get(), [](const juce::URL &) {},
       [](const Tone3000::SignInCode &code) {
@@ -579,7 +579,7 @@ int commandTone3000(const Options &options) {
     return 0;
   }
   if (action != "status")
-    fail("usage: evil-cli tone3000 status|connect|disconnect");
+    fail("usage: headroom-cli tone3000 status|connect|disconnect");
 
   // Says whether it works, by using it; never prints a key or token.
   std::cout << "key: " << (tone3000.hasKey() ? "yes" : "no") << "\nsigned in: "
@@ -604,14 +604,14 @@ int main(int argc, char **argv) {
   juce::ScopedJuceInitialiser_GUI juce; // message manager for ChangeBroadcaster
   if (argc < 2) {
     std::cerr
-        << "usage: evil-cli render|esr|bench|info|agent|measure|tone3000 ...  (see tools/evil_cli.cpp)"
+        << "usage: headroom-cli render|esr|bench|info|agent|measure|tone3000 ...  (see tools/headroom_cli.cpp)"
         << std::endl;
     return 1;
   }
   const juce::String command(argv[1]);
   const auto options = parse(argc, argv);
   if (!options.has("--exact-tanh"))
-    evil::ModelManager::enableFastTanh(); // what the plugin runs
+    headroom::ModelManager::enableFastTanh(); // what the plugin runs
   if (command == "render")
     return render(options);
   if (command == "esr")

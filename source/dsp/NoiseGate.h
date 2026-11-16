@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace evil {
+namespace headroom {
 /** Guitar noise gate with hysteresis and hold.
 
     A fast RMS detector opens the gate when the level rises above the threshold
@@ -78,4 +78,4 @@ private:
   float meanSquare = 0.0f, gain = 1.0f;
   bool open = true;
 };
-} // namespace evil
+} // namespace headroom

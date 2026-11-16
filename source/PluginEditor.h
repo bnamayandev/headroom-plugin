@@ -3,19 +3,19 @@
 #include "PluginProcessor.h"
 #include "gui/AgentPage.h"
 #include "gui/KeysPanel.h"
-#include "gui/EvilLookAndFeel.h"
+#include "gui/HeadroomLookAndFeel.h"
 #include "gui/PedalBoard.h"
 #include "gui/Settings.h"
 #include "gui/TunerPage.h"
 #include "gui/Widgets.h"
 
-namespace evil {
-class EvilAmplifierEditor final : public juce::AudioProcessorEditor,
-                                  private juce::Timer,
-                                  private juce::ChangeListener {
+namespace headroom {
+class HeadroomEditor final : public juce::AudioProcessorEditor,
+                             private juce::Timer,
+                             private juce::ChangeListener {
 public:
-  explicit EvilAmplifierEditor(EvilAmplifierProcessor &);
-  ~EvilAmplifierEditor() override;
+  explicit HeadroomEditor(HeadroomProcessor &);
+  ~HeadroomEditor() override;
 
   void paint(juce::Graphics &) override;
   void resized() override;
@@ -28,7 +28,7 @@ private:
      canvas, which is then scaled uniformly to whatever size the host or window
      manager gives the editor. */
   struct Canvas final : juce::Component {
-    explicit Canvas(EvilAmplifierEditor &e) : owner(e) {}
+    explicit Canvas(HeadroomEditor &e) : owner(e) {}
     void paint(juce::Graphics &g) override { owner.paintCanvas(g); }
     void resized() override { owner.layoutCanvas(); }
     void mouseDown(const juce::MouseEvent &e) override {
@@ -37,7 +37,7 @@ private:
     void mouseDrag(const juce::MouseEvent &e) override {
       owner.canvasMouseDrag(e);
     }
-    EvilAmplifierEditor &owner;
+    HeadroomEditor &owner;
   };
 
   void paintCanvas(juce::Graphics &);
@@ -77,9 +77,9 @@ private:
   void tapTempo();
   void stepTranspose(int delta);
 
-  EvilAmplifierProcessor &audioProcessor;
+  HeadroomProcessor &audioProcessor;
   juce::SharedResourcePointer<gui::Settings> settings; // sets the accent first
-  gui::EvilLookAndFeel lookAndFeel;
+  gui::HeadroomLookAndFeel lookAndFeel;
   Canvas canvas{*this};
   juce::TooltipWindow tooltips{this, 600};
 
@@ -158,6 +158,6 @@ private:
   int textRefreshCounter = 0;
   juce::String creditedIrSource, irCredit; // read from disk only when it changes
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EvilAmplifierEditor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HeadroomEditor)
 };
-} // namespace evil
+} // namespace headroom

@@ -4,7 +4,7 @@
 #include <complex>
 #include <numbers>
 
-namespace evil {
+namespace headroom {
 /** Second-order section coefficients (normalised so a0 == 1), from the RBJ
    Audio EQ Cookbook. Computed with plain arithmetic, so they are safe to
    recalculate on the audio thread (juce::dsp::IIR::Coefficients allocates). */
@@ -132,4 +132,4 @@ private:
   BiquadCoeffs coeffs;
   double z1 = 0.0, z2 = 0.0;
 };
-} // namespace evil
+} // namespace headroom

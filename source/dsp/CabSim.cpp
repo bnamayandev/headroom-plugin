@@ -1,6 +1,6 @@
 #include "CabSim.h"
 
-#include "EvilBinaryData.h"
+#include "HeadroomBinaryData.h"
 #include "Loudness.h"
 
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -9,7 +9,7 @@
 #include <cmath>
 #include <cstring>
 
-namespace evil {
+namespace headroom {
 namespace {
 struct BuiltinIr {
   const char *id;
@@ -18,8 +18,11 @@ struct BuiltinIr {
 };
 
 constexpr BuiltinIr builtinIrs[] = {
-    {"EvilCab4x12", "EvilCab4x12_wav", "Evil 4x12 (built-in)"},
+    {"HeadroomCab4x12", "HeadroomCab4x12_wav", "Headroom 4x12"},
 };
+
+// The cab's id before the amp was renamed Headroom: older sessions and presets ask for it.
+constexpr const char *legacyBuiltinId = "EvilCab4x12";
 } // namespace
 
 juce::StringArray CabSim::getBuiltinNames() {
@@ -69,8 +72,11 @@ void CabSim::process(float *data, int n, bool enabled) noexcept {
   }
 }
 
-bool CabSim::load(const juce::String &newSource, juce::String &error) {
+bool CabSim::load(const juce::String &requested, juce::String &error) {
   std::lock_guard lock(loadMutex);
+  const juce::String newSource = requested == juce::String(builtinPrefix) + legacyBuiltinId
+                                     ? juce::String(builtinPrefix) + builtinIrs[0].id
+                                     : requested;
 
   juce::AudioFormatManager formats;
   formats.registerBasicFormats();
@@ -86,7 +92,7 @@ bool CabSim::load(const juce::String &newSource, juce::String &error) {
     int size = 0;
     const char *data =
         entry != std::end(builtinIrs)
-            ? EvilBinaryData::getNamedResource(entry->resource, size)
+            ? HeadroomBinaryData::getNamedResource(entry->resource, size)
             : nullptr;
     if (data == nullptr) {
       error = "Unknown built-in IR: " + id;
@@ -198,4 +204,4 @@ juce::String CabSim::getDisplayName() const {
   std::lock_guard lock(loadMutex);
   return displayName;
 }
-} // namespace evil
+} // namespace headroom

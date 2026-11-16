@@ -4,8 +4,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-using namespace evil;
-using namespace evil::test;
+using namespace headroom;
+using namespace headroom::test;
 
 namespace {
 double tone(const std::vector<double> &x, double rate, double freq) {

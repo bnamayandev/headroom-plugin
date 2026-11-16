@@ -1,7 +1,7 @@
-// evil-snapshot: renders the plugin editor offscreen to PNG files, without
+// headroom-snapshot: renders the plugin editor offscreen to PNG files, without
 // opening a window.
 //
-//   evil-snapshot <output-directory>
+//   headroom-snapshot <output-directory>
 //
 // Writes editor.png (default size), editor@1.5x.png, editor-playing.png: the
 // amp page with a guitar going through it and the EQ moved, editor-violet.png:
@@ -82,26 +82,26 @@ bool saveTyping(juce::Component &page, const juce::File &file) {
     moved, then puts the EQ back. Nothing's running, so it hands every display
     what the editor's timer would. */
 bool savePlaying(juce::AudioProcessorEditor &editor,
-                 evil::EvilAmplifierProcessor &processor, const juce::File &file) {
-  auto *spectrum = findChild<evil::gui::Spectrum>(editor);
-  auto *tubes = findChild<evil::gui::TubeBank>(editor);
-  std::vector<evil::gui::LevelMeter *> meters;
+                 headroom::HeadroomProcessor &processor, const juce::File &file) {
+  auto *spectrum = findChild<headroom::gui::Spectrum>(editor);
+  auto *tubes = findChild<headroom::gui::TubeBank>(editor);
+  std::vector<headroom::gui::LevelMeter *> meters;
   findAll(editor, meters);
   if (spectrum == nullptr || tubes == nullptr || meters.size() != 2) {
     std::cout << "FAILED: no amp page displays" << std::endl;
     return false;
   }
 
-  constexpr std::array<float, evil::Equaliser::numBands> curve{
+  constexpr std::array<float, headroom::Equaliser::numBands> curve{
       3.5f, 2.0f, -1.0f, -3.5f, -2.0f, 1.5f, 4.5f, 3.0f, 1.0f};
-  std::array<float, evil::Equaliser::numBands> bands;
+  std::array<float, headroom::Equaliser::numBands> bands;
   auto &state = processor.getState();
   for (size_t b = 0; b < bands.size(); ++b) {
-    auto *param = state.getParameter(evil::params::eqBands[b]);
+    auto *param = state.getParameter(headroom::params::eqBands[b]);
     param->setValueNotifyingHost(param->convertTo0to1(curve[b]));
     bands[b] = param->getValue();
   }
-  spectrum->setBands(bands, (double)evil::Equaliser::maxGainDb);
+  spectrum->setBands(bands, (double)headroom::Equaliser::maxGainDb);
 
   // A distorted chord: its harmonics, over the hash an amp and a cab leave.
   constexpr double rate = 48000.0;
@@ -134,19 +134,19 @@ bool savePlaying(juce::AudioProcessorEditor &editor,
   meters[0]->pushPeak(0.0f, 100.0f);
   meters[1]->pushPeak(0.0f, 100.0f);
   for (size_t b = 0; b < bands.size(); ++b) {
-    auto *param = state.getParameter(evil::params::eqBands[b]);
+    auto *param = state.getParameter(headroom::params::eqBands[b]);
     param->setValueNotifyingHost(param->getDefaultValue());
     bands[b] = param->getValue();
   }
-  spectrum->setBands(bands, (double)evil::Equaliser::maxGainDb);
+  spectrum->setBands(bands, (double)headroom::Equaliser::maxGainDb);
   spectrum->refresh(rate, 100.0f); // no fresh samples: the curve sinks away
   return ok;
 }
 
 /** Plays a plucked note through the processor and hands what comes out of its
     tuner tap to the page, the way the editor's timer does. */
-void playNote(evil::EvilAmplifierProcessor &processor,
-              evil::gui::TunerPage &tuner, double hz) {
+void playNote(headroom::HeadroomProcessor &processor,
+              headroom::gui::TunerPage &tuner, double hz) {
   constexpr double rate = 48000.0;
   constexpr int block = 128, blocksPerTick = 13; // about 30 Hz
   juce::AudioBuffer<float> buffer(2, block);
@@ -176,7 +176,7 @@ void playNote(evil::EvilAmplifierProcessor &processor,
 int main(int argc, char **argv) {
   juce::ScopedJuceInitialiser_GUI juce;
   if (argc != 2) {
-    std::cerr << "usage: evil-snapshot <output-directory>" << std::endl;
+    std::cerr << "usage: headroom-snapshot <output-directory>" << std::endl;
     return 1;
   }
   const auto dir =
@@ -184,21 +184,21 @@ int main(int argc, char **argv) {
   dir.createDirectory();
 
   // Held for the whole run, so editors don't reload the saved accent.
-  juce::SharedResourcePointer<evil::gui::Settings> settings;
-  evil::gui::colours::setAccentHue(evil::gui::colours::defaultAccentHue);
+  juce::SharedResourcePointer<headroom::gui::Settings> settings;
+  headroom::gui::colours::setAccentHue(headroom::gui::colours::defaultAccentHue);
 
   // Before anything reads it, so the player's real keys never get near a shot.
-  juce::SharedResourcePointer<evil::agent::AgentSettings> agentSettings;
+  juce::SharedResourcePointer<headroom::agent::AgentSettings> agentSettings;
   const juce::TemporaryFile agentFile(".xml");
   agentSettings->useFile(agentFile.getFile());
 
-  evil::EvilAmplifierProcessor processor;
+  headroom::HeadroomProcessor processor;
   processor.prepareToPlay(48000.0, 128);
 
   // Let the background model load finish; the editor reads the status when it
   // opens.
   for (int i = 0; i < 500 && processor.getModels().getStatus().state !=
-                                 evil::ModelManager::State::ready;
+                                 headroom::ModelManager::State::ready;
        ++i)
     juce::Thread::sleep(10);
 
@@ -216,11 +216,11 @@ int main(int argc, char **argv) {
 
   editor.reset();
 
-  for (auto *id : {evil::params::wahOn, evil::params::odOn,
-                   evil::params::phaserOn, evil::params::delayOn,
-                   evil::params::reverbOn})
+  for (auto *id : {headroom::params::wahOn, headroom::params::odOn,
+                   headroom::params::phaserOn, headroom::params::delayOn,
+                   headroom::params::reverbOn})
     processor.getState().getParameter(id)->setValueNotifyingHost(1.0f);
-  auto *transpose = processor.getState().getParameter(evil::params::transpose);
+  auto *transpose = processor.getState().getParameter(headroom::params::transpose);
   transpose->setValueNotifyingHost(transpose->convertTo0to1(-1.0f));
   processor.editorPage = 1;
   editor.reset(processor.createEditor());
@@ -233,12 +233,12 @@ int main(int argc, char **argv) {
   editor.reset();
   processor.editorPage = 2;
   editor.reset(processor.createEditor());
-  if (auto *tuner = findChild<evil::gui::TunerPage>(*editor)) {
-    const auto custom = evil::tuning::fromText("D4 B3 G3 Gb3 A2 E2");
+  if (auto *tuner = findChild<headroom::gui::TunerPage>(*editor)) {
+    const auto custom = headroom::tuning::fromText("D4 B3 G3 Gb3 A2 E2");
     tuner->showStrings(*custom);
     ok = save(*editor, dir.getChildFile("tuner-idle.png"), 1.5f) && ok;
 
-    const auto gb3 = evil::tuning::frequencyOf(54);
+    const auto gb3 = headroom::tuning::frequencyOf(54);
     playNote(processor, *tuner, gb3 * std::pow(2.0, 18.0 / 1200.0));
     ok = save(*editor, dir.getChildFile("tuner.png"), 1.5f) && ok;
     playNote(processor, *tuner, gb3 * std::pow(2.0, -1.0 / 1200.0));
@@ -247,7 +247,7 @@ int main(int argc, char **argv) {
     // String 1 wants D4 and it's still at E4.
     if (auto *string1 = dynamic_cast<juce::Button *>(findButton(*tuner, "1")))
       string1->onClick();
-    playNote(processor, *tuner, evil::tuning::frequencyOf(64));
+    playNote(processor, *tuner, headroom::tuning::frequencyOf(64));
     ok = save(*editor, dir.getChildFile("tuner-locked.png"), 1.5f) && ok;
   } else {
     std::cout << "FAILED: no tuner page" << std::endl;
@@ -255,12 +255,12 @@ int main(int argc, char **argv) {
   }
 
   // Not settings->setAccentHue(), which would save it.
-  evil::gui::colours::setAccentHue(215.0f / 360.0f);
+  headroom::gui::colours::setAccentHue(215.0f / 360.0f);
   editor.reset();
   processor.editorPage = 0;
   editor.reset(processor.createEditor());
   if (auto *button = findButton(*editor, "settings")) {
-    evil::gui::SettingsPanel panel(nullptr);
+    headroom::gui::SettingsPanel panel(nullptr);
     juce::CallOutBox box(panel, button->getBounds(),
                          button->getParentComponent());
     ok = save(*editor, dir.getChildFile("settings.png"), 1.5f) && ok;
@@ -269,30 +269,30 @@ int main(int argc, char **argv) {
     ok = false;
   }
 
-  evil::gui::colours::setAccentHue(244.0f / 360.0f);
+  headroom::gui::colours::setAccentHue(244.0f / 360.0f);
   editor.reset();
   editor.reset(processor.createEditor());
   ok = save(*editor, dir.getChildFile("editor-violet.png"), 1.5f) && ok;
 
-  evil::gui::colours::setAccentHue(evil::gui::colours::defaultAccentHue);
+  headroom::gui::colours::setAccentHue(headroom::gui::colours::defaultAccentHue);
   editor.reset();
   {
     // The app is the same editor on a processor that knows it's in the app.
     juce::AudioProcessor::setTypeOfNextNewPlugin(
         juce::AudioProcessor::wrapperType_Standalone);
-    evil::EvilAmplifierProcessor app;
+    headroom::HeadroomProcessor app;
     juce::AudioProcessor::setTypeOfNextNewPlugin(
         juce::AudioProcessor::wrapperType_Undefined);
     app.prepareToPlay(48000.0, 128);
     for (int i = 0; i < 500 && app.getModels().getStatus().state !=
-                                   evil::ModelManager::State::ready;
+                                   headroom::ModelManager::State::ready;
          ++i)
       juce::Thread::sleep(10);
 
     std::unique_ptr<juce::AudioProcessorEditor> appEditor(app.createEditor());
     ok = save(*appEditor, dir.getChildFile("app.png"), 1.5f) && ok;
     if (auto *button = findButton(*appEditor, "settings")) {
-      evil::gui::SettingsPanel panel(nullptr, evil::gui::SettingsPanel::AppActions{});
+      headroom::gui::SettingsPanel panel(nullptr, headroom::gui::SettingsPanel::AppActions{});
       juce::CallOutBox box(panel, button->getBounds(),
                            button->getParentComponent());
       ok = save(*appEditor, dir.getChildFile("app-settings.png"), 1.5f) && ok;
@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
   // The keys live in their own callout, opened from the settings popover.
   const auto saveKeys = [&](const char *name) {
     if (auto *button = findButton(*editor, "settings")) {
-      evil::gui::KeysPanel panel(processor.getAgent(), *agentSettings);
+      headroom::gui::KeysPanel panel(processor.getAgent(), *agentSettings);
       juce::CallOutBox box(panel, button->getBounds(), button->getParentComponent());
       return save(*editor, dir.getChildFile(name), 1.5f);
     }
@@ -319,7 +319,7 @@ int main(int argc, char **argv) {
   };
   ok = saveKeys("agent-keys.png") && ok;
 
-  agentSettings->set(evil::agent::AgentSettings::tone3000Key, "t3k_pub_not_real");
+  agentSettings->set(headroom::agent::AgentSettings::tone3000Key, "t3k_pub_not_real");
   processor.getAgent().showForSnapshot(
       {}, {"WXYZ-1234", "https://www.tone3000.com/activate",
            "https://www.tone3000.com/activate?code=WXYZ-1234"});
@@ -328,8 +328,8 @@ int main(int argc, char **argv) {
   ok = saveKeys("agent-sign-in.png") && ok;
   processor.getAgent().showForSnapshot({});
 
-  using Entry = evil::agent::Session::Entry;
-  agentSettings->setApiKey(evil::agent::ProviderId::anthropic, "not-a-real-key");
+  using Entry = headroom::agent::Session::Entry;
+  agentSettings->setApiKey(headroom::agent::ProviderId::anthropic, "not-a-real-key");
   editor.reset();
   editor.reset(processor.createEditor());
   ok = save(*editor, dir.getChildFile("agent-empty.png"), 1.5f) && ok;

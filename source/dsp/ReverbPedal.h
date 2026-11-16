@@ -6,7 +6,7 @@
 
 #include <array>
 
-namespace evil {
+namespace headroom {
 /** Plate reverb after Dattorro, "Effect Design Part 1" (JAES 1997): four input
    diffusers feeding a figure-of-eight tank of modulated allpasses, delays and
    damping filters. The output sums both of the paper's tap sets to mono. The
@@ -62,4 +62,4 @@ private:
   juce::SmoothedValue<float> decay, tone, mix;
   bool primed = false;
 };
-} // namespace evil
+} // namespace headroom

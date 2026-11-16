@@ -1,8 +1,9 @@
 #include "Settings.h"
 
-#include "EvilLookAndFeel.h"
+#include "HeadroomLookAndFeel.h"
+#include "state/DataDirectory.h"
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace {
 constexpr auto accentHueKey = "accentHue";
 constexpr auto normaliseVolumeKey = "normaliseVolume";
@@ -21,10 +22,7 @@ Settings::Settings() : file(getFile(), fileOptions()) {
 }
 
 juce::File Settings::getFile() {
-  return juce::File::getSpecialLocation(
-             juce::File::userApplicationDataDirectory)
-      .getChildFile("EvilAmplifier")
-      .getChildFile("settings.xml");
+  return getDataDirectory().getChildFile("settings.xml");
 }
 
 void Settings::setAccentHue(float hue) {
@@ -216,4 +214,4 @@ void SettingsPanel::mouseMove(const juce::MouseEvent &e) {
   setMouseCursor(hot ? juce::MouseCursor::PointingHandCursor
                      : juce::MouseCursor::NormalCursor);
 }
-} // namespace evil::gui
+} // namespace headroom::gui

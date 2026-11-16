@@ -7,7 +7,7 @@
 #include <array>
 #include <cmath>
 
-namespace evil {
+namespace headroom {
 /** Post-cab nine-band graphic EQ: peaking bands an octave apart from 50 Hz to
    12.8 kHz (the seven bands of a Boss GE-7, 100 Hz - 6.4 kHz, plus an octave either
    side), each +/-15 dB as on a GE-7.
@@ -156,4 +156,4 @@ private:
   std::array<Biquad, numBands> filters;
   bool primed = false;
 };
-} // namespace evil
+} // namespace headroom

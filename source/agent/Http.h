@@ -4,7 +4,7 @@
 
 #include <mutex>
 
-namespace evil::agent {
+namespace headroom::agent {
 struct HttpRequest {
   juce::String method{"GET"};
   juce::String url; // absolute, including any query
@@ -51,4 +51,4 @@ private:
   juce::WebInputStream *current = nullptr;
   bool aborted = false;
 };
-} // namespace evil::agent
+} // namespace headroom::agent

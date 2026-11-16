@@ -5,7 +5,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-namespace evil::params {
+namespace headroom::params {
 // Parameter IDs are part of saved state and host automation: never rename them.
 inline constexpr const char *input = "input";
 inline constexpr const char *gateOn = "gate_on";
@@ -92,7 +92,9 @@ void upgradeLegacyEq(juce::XmlElement &saved, juce::StringRef tag);
 inline constexpr const char *modelSourceProperty = "modelSource";
 inline constexpr const char *irSourceProperty = "irSource";
 inline constexpr const char *defaultModelSource = "builtin:BlackstarHT1";
-inline constexpr const char *defaultIrSource = "builtin:EvilCab4x12";
+inline constexpr const char *defaultIrSource = "builtin:HeadroomCab4x12";
+// What sessions saved before the amp was renamed Headroom tag their state.
+inline constexpr const char *legacyStateType = "EvilAmplifier";
 
 juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
@@ -125,4 +127,4 @@ private:
   std::atomic<float> *reverbOn, *reverbDecay, *reverbTone, *reverbMix;
   std::atomic<float> *metronomeBpm, *metronomeBeats, *metronomeLevel;
 };
-} // namespace evil::params
+} // namespace headroom::params

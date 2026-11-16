@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace evil::loudness {
+namespace headroom::loudness {
 /** How loud captures and IRs are, so they can all be played at the same level.
 
     A capture is measured as it loads, by playing a test guitar through it, and an
@@ -57,4 +57,4 @@ double gainThroughDb(const std::vector<float> &signal,
     `rate`: resampled, and scaled as juce::dsp::Convolution scales it, so it has
     the same frequency response. */
 std::vector<float> atRate(const float *impulseResponse, int length, double sampleRate);
-} // namespace evil::loudness
+} // namespace headroom::loudness

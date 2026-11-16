@@ -2,7 +2,7 @@
 
 #include "dsp/AnalogStages.h"
 
-namespace evil::params {
+namespace headroom::params {
 namespace {
 using Float = juce::AudioParameterFloat;
 using Bool = juce::AudioParameterBool;
@@ -378,4 +378,4 @@ Metronome::Settings Snapshot::readMetronome(bool running) const noexcept {
   m.levelDb = metronomeLevel->load(std::memory_order_relaxed);
   return m;
 }
-} // namespace evil::params
+} // namespace headroom::params

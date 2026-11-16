@@ -13,7 +13,7 @@
 
 #include <atomic>
 
-namespace evil {
+namespace headroom {
 /** Per-block processing time as a fraction of the block's real-time deadline.
    Written by the audio thread, read by the GUI and the log. */
 struct CpuStats {
@@ -43,12 +43,12 @@ struct SharedLogFile {
   std::unique_ptr<juce::FileLogger> logger;
 };
 
-class EvilAmplifierProcessor final : public juce::AudioProcessor,
-                                     private juce::Timer,
-                                     private juce::ChangeListener {
+class HeadroomProcessor final : public juce::AudioProcessor,
+                                private juce::Timer,
+                                private juce::ChangeListener {
 public:
-  EvilAmplifierProcessor();
-  ~EvilAmplifierProcessor() override;
+  HeadroomProcessor();
+  ~HeadroomProcessor() override;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
   void releaseResources() override;
@@ -163,6 +163,6 @@ private:
   agent::ProcessorAmp agentAmp;
   agent::Session agentSession;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EvilAmplifierProcessor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HeadroomProcessor)
 };
-} // namespace evil
+} // namespace headroom

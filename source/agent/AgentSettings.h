@@ -5,7 +5,7 @@
 #include <map>
 #include <mutex>
 
-namespace evil::agent {
+namespace headroom::agent {
 enum class ProviderId { anthropic, openai, gemini };
 
 /** The agent's preferences and secrets: LLM API keys, the TONE3000 key and
@@ -20,14 +20,14 @@ public:
   AgentSettings();
 
   static juce::File getDefaultFile();
-  /** Moves to another file and reloads, for tests and evil-snapshot. */
+  /** Moves to another file and reloads, for tests and headroom-snapshot. */
   void useFile(const juce::File &);
 
   juce::String get(const juce::String &key) const;
   void set(const juce::String &key, const juce::String &value);
-  /** Applies until the process exits and is never written out, for evil-cli. */
+  /** Applies until the process exits and is never written out, for headroom-cli. */
   void setForThisRun(const juce::String &key, const juce::String &value);
-  /** Picks up what another process has saved: the standalone, a DAW and evil-cli
+  /** Picks up what another process has saved: the standalone, a DAW and headroom-cli
       all share this file. */
   void reloadIfChanged();
 
@@ -38,7 +38,7 @@ public:
   juce::String getApiKey(ProviderId) const;
   void setApiKey(ProviderId, const juce::String &);
 
-  /** evil-cli only: where to send model requests instead of the provider. */
+  /** headroom-cli only: where to send model requests instead of the provider. */
   static constexpr const char *testBaseUrl = "test_base_url";
 
   static juce::String providerName(ProviderId);
@@ -62,4 +62,4 @@ private:
   juce::String loadedText; // compared, as file times only resolve to a second
   std::map<juce::String, juce::String> values, forThisRun;
 };
-} // namespace evil::agent
+} // namespace headroom::agent

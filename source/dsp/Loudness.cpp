@@ -6,7 +6,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace evil::loudness {
+namespace headroom::loudness {
 namespace {
 constexpr int chordSamples = (int)(1.2 * rate);
 // About halfway, in dB, between the tone meter's gentle (0.05) and hard (0.2) chords.
@@ -155,4 +155,4 @@ std::vector<float> atRate(const float *impulseResponse, int length, double sampl
   result.applyGain((float)factor);
   return {result.getReadPointer(0), result.getReadPointer(0) + size};
 }
-} // namespace evil::loudness
+} // namespace headroom::loudness

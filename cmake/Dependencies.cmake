@@ -28,7 +28,7 @@ FetchContent_Declare(Eigen
 
 FetchContent_MakeAvailable(JUCE NeuralAmpModelerCore Eigen)
 
-if(EVIL_BUILD_TESTS)
+if(HEADROOM_BUILD_TESTS)
     FetchContent_Declare(Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
         GIT_TAG v3.8.1
@@ -55,11 +55,11 @@ set_target_properties(nam_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 # includes json.hpp gets the same definition. Force-included because MSVC's /D
 # can't define a function-like macro. It reaches C files too (the Visual Studio
 # generator can't tell them apart), so the header does nothing in C.
-set(EVIL_JSON_ASSERT_H "${CMAKE_CURRENT_LIST_DIR}/JsonAssert.h")
+set(HEADROOM_JSON_ASSERT_H "${CMAKE_CURRENT_LIST_DIR}/JsonAssert.h")
 if(MSVC)
-    target_compile_options(nam_core PUBLIC "/FI${EVIL_JSON_ASSERT_H}")
+    target_compile_options(nam_core PUBLIC "/FI${HEADROOM_JSON_ASSERT_H}")
 else()
-    target_compile_options(nam_core PUBLIC "SHELL:-include \"${EVIL_JSON_ASSERT_H}\"")
+    target_compile_options(nam_core PUBLIC "SHELL:-include \"${HEADROOM_JSON_ASSERT_H}\"")
 endif()
 
 if(MSVC)

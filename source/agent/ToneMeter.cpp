@@ -6,7 +6,7 @@
 
 #include <numbers>
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 constexpr double rate = 48000.0;
 constexpr int blockSize = 256;
@@ -159,4 +159,4 @@ ToneReading measureTone(SignalChain::Settings settings, const juce::String &mode
   reading.distortionHardCaptureAlone = bare.hard;
   return reading;
 }
-} // namespace evil::agent
+} // namespace headroom::agent

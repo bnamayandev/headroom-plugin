@@ -16,7 +16,7 @@ Fine peaks and dips above 1 kHz stand in for cone break-up, which is never smoot
 reflection adds the slight comb of a mic in front of a speaker. Without them it sounds like an
 EQ curve rather than a speaker.
 
-    python -m evilamp.make_ir ../resources/irs/EvilCab4x12.wav
+    python -m headroom.make_ir ../resources/irs/HeadroomCab4x12.wav
 """
 
 from __future__ import annotations

@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-namespace evil::agent {
+namespace headroom::agent {
 struct ToolSpec {
   juce::String name, description;
   juce::var schema; // JSON Schema for the arguments
@@ -55,7 +55,7 @@ public:
   struct Config {
     juce::String apiKey, model, systemPrompt;
     std::vector<ToolSpec> tools;
-    juce::String baseUrl; // empty for the provider's own; evil-cli can point it
+    juce::String baseUrl; // empty for the provider's own; headroom-cli can point it
                           // at a local stand-in, for testing without a key
   };
 
@@ -84,4 +84,4 @@ std::vector<Source> parseSearchSuggestions(const juce::String &html);
 /** Only these are opened in a browser. A link can come from a web page by way
     of a model, and other schemes can run things or read local files. */
 bool isSafeLink(const juce::String &url);
-} // namespace evil::agent
+} // namespace headroom::agent

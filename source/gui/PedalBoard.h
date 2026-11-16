@@ -5,7 +5,7 @@
 #include <array>
 #include <memory>
 
-namespace evil::gui {
+namespace headroom::gui {
 /** One stomp box in its own paint: three knobs across the top, its name and a
    drawing of what it does to a signal, then its light and footswitch. While
    bypassed its paint goes dull and its light goes out. */
@@ -74,4 +74,4 @@ private:
   juce::Rectangle<int> ampSlot;
   PaintCache board;
 };
-} // namespace evil::gui
+} // namespace headroom::gui

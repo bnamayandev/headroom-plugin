@@ -1,6 +1,6 @@
 #include "ModelManager.h"
 
-#include "EvilBinaryData.h"
+#include "HeadroomBinaryData.h"
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
@@ -10,7 +10,7 @@
 #include <cstring>
 #include <mutex>
 
-namespace evil {
+namespace headroom {
 namespace {
 struct BuiltinModel {
   const char *id;       // the part after "builtin:"
@@ -88,7 +88,7 @@ ModelManager::LoadResult ModelManager::buildRunner(const juce::String &source) {
     int size = 0;
     const char *data =
         entry != std::end(builtinModels)
-            ? EvilBinaryData::getNamedResource(entry->resource, size)
+            ? HeadroomBinaryData::getNamedResource(entry->resource, size)
             : nullptr;
     if (data == nullptr) {
       result.error = "Unknown built-in model: " + id;
@@ -420,4 +420,4 @@ void ModelManager::process(const float *in, float *out, int n) noexcept {
 
   switchMatching(out, n);
 }
-} // namespace evil
+} // namespace headroom

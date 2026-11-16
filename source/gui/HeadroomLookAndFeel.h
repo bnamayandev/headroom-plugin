@@ -6,7 +6,7 @@
 
 #include <map>
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace colours {
 // Blackened steel and silkscreen ink: neutral blacks, so the accent is the only
 // thing on the panel with any colour in it.
@@ -68,9 +68,9 @@ void setProse(juce::Button &);
 /** Marks a slider as one of the small knobs on a pedal: smaller value text. */
 void setCompact(juce::Slider &);
 
-class EvilLookAndFeel final : public juce::LookAndFeel_V4 {
+class HeadroomLookAndFeel final : public juce::LookAndFeel_V4 {
 public:
-  EvilLookAndFeel();
+  HeadroomLookAndFeel();
 
   /** Re-applies the colour ids that hold the accent; call after it changes. */
   void refreshAccent();
@@ -117,4 +117,4 @@ private:
   std::map<int, PaintCache> knobBodies;             // by size in 1/10 px
   PaintCache faderCap;
 };
-} // namespace evil::gui
+} // namespace headroom::gui

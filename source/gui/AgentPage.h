@@ -7,7 +7,7 @@
 
 #include <functional>
 
-namespace evil::gui {
+namespace headroom::gui {
 /** The agent tab: a chat with a model that researches tones and sets the amp up,
     using the player's own API keys, which are entered under SETTINGS. */
 class AgentPage final : public juce::Component, private juce::ChangeListener {
@@ -63,4 +63,4 @@ private:
   juce::String statusText;
   bool wasBusy = false;
 };
-} // namespace evil::gui
+} // namespace headroom::gui

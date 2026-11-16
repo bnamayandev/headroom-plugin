@@ -10,7 +10,7 @@
 #include <array>
 #include <cstring>
 
-namespace evil {
+namespace headroom {
 /** Click-free footswitch: crossfades between the dry input and an effect's
    output over 10 ms. Once fully off the effect is skipped, so an off pedal is a
    bit-exact pass-through and costs nothing; switching back on resets the
@@ -368,4 +368,4 @@ private:
   juce::SmoothedValue<float> rate, depth, shape;
   bool primed = false;
 };
-} // namespace evil
+} // namespace headroom

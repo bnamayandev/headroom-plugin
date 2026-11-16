@@ -1,9 +1,9 @@
 #include "PedalBoard.h"
 
-#include "EvilLookAndFeel.h"
+#include "HeadroomLookAndFeel.h"
 #include "state/Parameters.h"
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace {
 constexpr int captionHeight = 24, gap = 10, rowGap = 8, ampBlockWidth = 54;
 
@@ -355,4 +355,4 @@ void PedalBoard::paint(juce::Graphics &g) {
     c.drawText("AMP", amp, juce::Justification::centred);
   });
 }
-} // namespace evil::gui
+} // namespace headroom::gui

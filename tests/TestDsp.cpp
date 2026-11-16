@@ -6,8 +6,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
-using namespace evil;
-using namespace evil::test;
+using namespace headroom;
+using namespace headroom::test;
 
 namespace {
 SignalChain::Settings neutral() {
@@ -163,7 +163,7 @@ TEST_CASE("A fader's number is the change in dB at its band, whatever its "
 }
 
 TEST_CASE("Swapping the cab IR at runtime does not click", "[cab]") {
-  const auto dir = juce::File::createTempFile("evil-ir");
+  const auto dir = juce::File::createTempFile("headroom-ir");
   dir.createDirectory();
   const auto irFile = dir.getChildFile("bright.wav");
   {
@@ -205,7 +205,7 @@ TEST_CASE("Swapping the cab IR at runtime does not click", "[cab]") {
   };
 
   juce::String error;
-  REQUIRE(chain.getCab().load("builtin:EvilCab4x12", error));
+  REQUIRE(chain.getCab().load("builtin:HeadroomCab4x12", error));
   runUntilIrLength([](int length) { return length > 0; });
   run(375); // let JUCE's 50 ms load crossfade finish, then measure 1 s with the
             // first IR
@@ -242,4 +242,11 @@ TEST_CASE("Invalid IR files are rejected with a reason", "[cab]") {
   file.replaceWithText("not audio");
   CHECK_FALSE(cab.load(file.getFullPathName(), error));
   file.deleteFile();
+}
+
+TEST_CASE("The built-in cab still loads by its name from before the rename", "[cab]") {
+  CabSim cab;
+  juce::String error;
+  REQUIRE(cab.load("builtin:EvilCab4x12", error));
+  CHECK(cab.getSource() == "builtin:HeadroomCab4x12");
 }

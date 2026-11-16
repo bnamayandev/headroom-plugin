@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstring>
 
-namespace evil {
+namespace headroom {
 namespace {
 // A peak this good is taken as soon as it's seen: nothing further away could be
 // enough better to be worth the extra delay.
@@ -267,4 +267,4 @@ void PitchShifter::process(float *data, int n, int semitones,
     data[i] = scratch[i] + t * (data[i] - scratch[i]);
   }
 }
-} // namespace evil
+} // namespace headroom

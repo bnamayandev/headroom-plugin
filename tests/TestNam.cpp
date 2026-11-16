@@ -5,8 +5,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-using namespace evil;
-using namespace evil::test;
+using namespace headroom;
+using namespace headroom::test;
 
 namespace {
 /** Loads a model through the plugin's manager and renders `in` exactly as the
@@ -37,7 +37,7 @@ std::vector<float> renderThroughManager(const juce::String &source,
 
 TEST_CASE("A model exported by the PyTorch trainer matches PyTorch in NAM Core",
           "[nam][parity]") {
-  // tests/data was written by `python -m evilamp.golden`: a random WaveNet, an
+  // tests/data was written by `python -m headroom.golden`: a random WaveNet, an
   // input, and PyTorch's output. Any mistake in the exporter's weight order
   // shows up here.
   double rate = 0.0;
@@ -103,7 +103,7 @@ TEST_CASE("The bundled capture loads with its metadata", "[nam]") {
 }
 
 TEST_CASE("Bad model files fail with a message instead of crashing", "[nam]") {
-  const auto dir = juce::File::createTempFile("evil-models");
+  const auto dir = juce::File::createTempFile("headroom-models");
   dir.createDirectory();
   const auto notJson = dir.getChildFile("garbage.nam");
   notJson.replaceWithText("this is not json");

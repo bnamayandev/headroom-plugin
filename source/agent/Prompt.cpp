@@ -4,12 +4,12 @@
 #include "dsp/ModelManager.h"
 #include "state/Parameters.h"
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 // One literal per section: MSVC rejects any single string literal over 16380 bytes
 // (C2026), and adjacent literals are joined at compile time.
 constexpr const char *introduction =
-    R"(You are the tone agent inside Evil Amplifier, a guitar amp simulator. A player tells you the sound they're after, by song, artist or plain description, and you set up the amp to get them there on the guitar they actually have. The amp is live: they can hear every change you make, and any of your turns can be undone with one click, so act rather than ask for permission. You can't hear it, so you have to reason about it carefully and check your work by measuring.
+    R"(You are the tone agent inside Headroom, a guitar amp simulator. A player tells you the sound they're after, by song, artist or plain description, and you set up the amp to get them there on the guitar they actually have. The amp is live: they can hear every change you make, and any of your turns can be undone with one click, so act rather than ask for permission. You can't hear it, so you have to reason about it carefully and check your work by measuring.
 
 The commonest way to get this wrong is to do too much. A real recorded guitar is usually a good amp, a suitable speaker, and one or two pedals at modest settings. Every extra gain stage, compressor and EQ move takes something away: dynamics, body or clarity. Too many of them is what makes a tone sound fizzy, squashed and empty. Add something only because you have a specific reason for it.
 
@@ -187,4 +187,4 @@ juce::String buildSystemPrompt(const AmpControl &amp) {
          << ".\n";
   return prompt;
 }
-} // namespace evil::agent
+} // namespace headroom::agent

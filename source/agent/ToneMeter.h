@@ -3,7 +3,7 @@
 #include "Tools.h"
 #include "dsp/SignalChain.h"
 
-namespace evil::agent {
+namespace headroom::agent {
 /** Plays a test guitar through a private copy of the chain with these settings, and
     again with every pedal and the EQ out of it, and measures both. Allocates and
     takes a moment: worker thread only. Modulation, delay and reverb are left out,
@@ -11,4 +11,4 @@ namespace evil::agent {
     levels read as the player hears them. */
 ToneReading measureTone(SignalChain::Settings, const juce::String &modelSource,
                         const juce::String &irSource, bool matchLevels);
-} // namespace evil::agent
+} // namespace headroom::agent

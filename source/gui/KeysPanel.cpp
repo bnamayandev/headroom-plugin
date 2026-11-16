@@ -1,9 +1,9 @@
 #include "KeysPanel.h"
 
-#include "EvilLookAndFeel.h"
+#include "HeadroomLookAndFeel.h"
 #include "Widgets.h"
 
-namespace evil::gui {
+namespace headroom::gui {
 namespace {
 using agent::AgentSettings;
 using agent::ProviderId;
@@ -209,4 +209,4 @@ bool KeysPanel::connected() const {
 }
 
 bool KeysPanel::waitingForCode() const { return session.getSignInCode().userCode.isNotEmpty(); }
-} // namespace evil::gui
+} // namespace headroom::gui

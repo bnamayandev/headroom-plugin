@@ -1,6 +1,7 @@
 #include "agent/HeadlessRig.h"
 #include "agent/Session.h"
 #include "dsp/Loudness.h"
+#include "state/DataDirectory.h"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -13,8 +14,8 @@
 #include <sys/stat.h>
 #endif
 
-using namespace evil::agent;
-namespace params = evil::params;
+using namespace headroom::agent;
+namespace params = headroom::params;
 
 namespace {
 HttpResponse respond(int status, const juce::String &body) {
@@ -145,7 +146,7 @@ public:
     return loadError;
   }
   juce::StringArray getBuiltinModels() const override { return {"BlackstarHT1"}; }
-  juce::StringArray getBuiltinIrs() const override { return {"EvilCab4x12"}; }
+  juce::StringArray getBuiltinIrs() const override { return {"HeadroomCab4x12"}; }
   std::unique_ptr<juce::XmlElement> captureState() override {
     auto xml = std::make_unique<juce::XmlElement>("Preset");
     for (const auto &p : getParameters())
@@ -177,16 +178,16 @@ public:
 /** A settings file, a TONE3000 library and user presets that vanish after the test. */
 struct TestFiles {
   TestFiles() {
-    dir = juce::File::createTempFile("evil-agent-test");
+    dir = juce::File::createTempFile("headroom-agent-test");
     dir.deleteFile();
     dir.createDirectory();
     settings.useFile(dir.getChildFile("agent.xml"));
     Tone3000::setLibraryDirectoryForTesting(dir.getChildFile("library"));
-    evil::PresetManager::setUserPresetDirectoryForTesting(dir.getChildFile("presets"));
+    headroom::PresetManager::setUserPresetDirectoryForTesting(dir.getChildFile("presets"));
   }
   ~TestFiles() {
     Tone3000::setLibraryDirectoryForTesting({});
-    evil::PresetManager::setUserPresetDirectoryForTesting({});
+    headroom::PresetManager::setUserPresetDirectoryForTesting({});
     dir.deleteRecursively();
   }
   juce::File dir;
@@ -233,7 +234,7 @@ struct FakeTone3000 {
       if (url.contains("architecture=2"))
         return respond(200, R"({"data":[{"id":7,"name":"Clean A2","size":"standard",
           "architecture_version":"2","model_url":"https://www.tone3000.com/api/v1/models/7/download"}]})");
-      return respond(200, "{\"data\":[{\"id\":9,\"name\":\"../../evil\",\"size\":\"lite\","
+      return respond(200, "{\"data\":[{\"id\":9,\"name\":\"../../attacker\",\"size\":\"lite\","
                           "\"architecture_version\":\"1\",\"model_url\":\"" +
                               modelUrl + "\"}]}");
     }
@@ -294,9 +295,9 @@ TEST_CASE("The access token only ever goes to TONE3000 over https", "[agent]") {
   CHECK(Tone3000::isTrustedUrl("https://www.tone3000.com/api/v1/models/1/download"));
   CHECK(Tone3000::isTrustedUrl("https://tone3000.com/x"));
   CHECK_FALSE(Tone3000::isTrustedUrl("http://www.tone3000.com/x"));
-  CHECK_FALSE(Tone3000::isTrustedUrl("https://www.tone3000.com.evil.example/x"));
-  CHECK_FALSE(Tone3000::isTrustedUrl("https://evil.example/www.tone3000.com"));
-  CHECK_FALSE(Tone3000::isTrustedUrl("https://eviltone3000.com/x"));
+  CHECK_FALSE(Tone3000::isTrustedUrl("https://www.tone3000.com.attacker.example/x"));
+  CHECK_FALSE(Tone3000::isTrustedUrl("https://attacker.example/www.tone3000.com"));
+  CHECK_FALSE(Tone3000::isTrustedUrl("https://attackertone3000.com/x"));
   CHECK_FALSE(Tone3000::isTrustedUrl("file:///etc/passwd"));
   CHECK(Tone3000::looksLikeSecretKey(" t3k_cs_abc"));
   CHECK_FALSE(Tone3000::looksLikeSecretKey("t3k_pub_abc"));
@@ -955,12 +956,12 @@ TEST_CASE("Downloads refuse what isn't safe or won't fit", "[agent]") {
   auto tools = makeTools(amp, tone3000);
 
   SECTION("a download URL off TONE3000 gets no request, let alone the token") {
-    server.modelUrl = "https://cdn.evil.example/steal";
+    server.modelUrl = "https://cdn.attacker.example/steal";
     const auto outcome = tools.execute(call("load_tone3000_capture", R"({"tone":36640,"model_id":9})"));
     CHECK(outcome.result.isError);
     CHECK(server.downloads == 0);
     for (const auto &request : http.getRequests())
-      CHECK_FALSE(request.url.contains("evil.example"));
+      CHECK_FALSE(request.url.contains("attacker.example"));
   }
   SECTION("a pedal capture can't be the amp") {
     server.tone = juce::String(toneJson).replace("amp-cab", "pedal");
@@ -988,7 +989,7 @@ TEST_CASE("Downloads refuse what isn't safe or won't fit", "[agent]") {
     CHECK(server.downloads == 0);
   }
   SECTION("nonsense IDs") {
-    CHECK(tools.execute(call("load_tone3000_capture", R"({"tone":"https://evil.example/","model_id":9})")).result.isError);
+    CHECK(tools.execute(call("load_tone3000_capture", R"({"tone":"https://attacker.example/","model_id":9})")).result.isError);
     CHECK(tools.execute(call("inspect_tone3000_tone", R"({"tone":"not a tone"})")).result.isError);
     CHECK(http.getRequests().empty());
   }
@@ -1086,7 +1087,7 @@ TEST_CASE("The cabinet switch goes with the capture", "[agent]") {
   }
   SECTION("the built-ins follow the same rules") {
     replyOf(loadCapture());
-    const auto ir = replyOf(tools.execute(call("load_builtin", R"({"kind":"ir","name":"EvilCab4x12"})")));
+    const auto ir = replyOf(tools.execute(call("load_builtin", R"({"kind":"ir","name":"HeadroomCab4x12"})")));
     CHECK_FALSE((bool)ir["cabinet_on"]);
     CHECK(amp.get(params::cabOn) == 0.0f);
 
@@ -1100,7 +1101,7 @@ TEST_CASE("The cabinet switch goes with the capture", "[agent]") {
     replyOf(tools.execute(call("load_builtin", R"({"kind":"model","name":"none"})")));
     CHECK(amp.get(params::cabOn) == 1.0f);
 
-    const auto second = replyOf(tools.execute(call("load_builtin", R"({"kind":"ir","name":"EvilCab4x12"})")));
+    const auto second = replyOf(tools.execute(call("load_builtin", R"({"kind":"ir","name":"HeadroomCab4x12"})")));
     CHECK((bool)second["cabinet_on"]);
   }
   SECTION("a capture's file says what it is, over the page it's on") {
@@ -1125,7 +1126,7 @@ TEST_CASE("The cabinet switch goes with the capture", "[agent]") {
     replyOf(loadCapture());
     const auto attribution = Tone3000::getLibraryDirectory()
                                  .getChildFile("36640")
-                                 .getChildFile(evil::PresetManager::attributionFileName);
+                                 .getChildFile(headroom::PresetManager::attributionFileName);
     REQUIRE(attribution.replaceWithText(R"({"credit":"An old one","url":"https://www.tone3000.com/tones/1"})"));
     CHECK(Tone3000::gearForSource(amp.getModel().source).isEmpty());
     replyOf(loadCapture());
@@ -1681,7 +1682,7 @@ TEST_CASE("Every band of the test guitar has something in it to read", "[agent]"
 //
 // These are the same pedals with no capture at all. They move if the pedals or the
 // test guitar do, and then the prompt's figures need measuring again with
-// `evil-cli measure`.
+// `headroom-cli measure`.
 TEST_CASE("What measure_tone reads is still what the prompt was written from", "[agent]") {
   TestFiles files;
   HeadlessRig rig;
@@ -1797,7 +1798,7 @@ TEST_CASE("The real amp: controls, sources and undo", "[agent]") {
   REQUIRE(model.loudnessDb.has_value());
   // Levels are matched, as the plugin starts, so every capture is as loud as the
   // next and a swap leaves the output where it is.
-  CHECK(*model.loudnessDb == Catch::Approx(evil::loudness::targetDb));
+  CHECK(*model.loudnessDb == Catch::Approx(headroom::loudness::targetDb));
   rig.chain.setMatchingLevels(false);
   // Without that, it's what the file says.
   REQUIRE(amp.getModel().loudnessDb.has_value());
@@ -1829,7 +1830,7 @@ TEST_CASE("The real amp: controls, sources and undo", "[agent]") {
 
 namespace {
 juce::File testData(const char *name) {
-  return juce::File(EVIL_TEST_DATA_DIR).getChildFile(name);
+  return juce::File(HEADROOM_TEST_DATA_DIR).getChildFile(name);
 }
 
 bool sameBytes(const juce::File &a, const juce::File &b) {
@@ -1855,7 +1856,7 @@ void loadPreset(HeadlessRig &rig, const juce::String &name) {
   REQUIRE(index >= 0);
   REQUIRE(rig.presets.load(index));
   const auto deadline = juce::Time::getMillisecondCounter() + 10000u;
-  while (rig.chain.getModels().getStatus().state == evil::ModelManager::State::loading &&
+  while (rig.chain.getModels().getStatus().state == headroom::ModelManager::State::loading &&
          juce::Time::getMillisecondCounter() < deadline)
     juce::Thread::sleep(5);
 }
@@ -1882,10 +1883,10 @@ TEST_CASE("A saved preset carries its capture and IR", "[agent][presets]") {
   REQUIRE(rig.presets.saveUserPreset("My Tone", error, &warning));
   CHECK(warning.isEmpty());
   const auto saved =
-      evil::PresetManager::getUserPresetDirectory().getChildFile("My Tone.evilpreset");
+      headroom::PresetManager::getUserPresetDirectory().getChildFile("My Tone.headroompreset");
   CHECK(carriedFiles(saved) == 2);
   // It's all in that one file: nothing else was made to go with it.
-  CHECK_FALSE(evil::PresetManager::getSavedFilesDirectory().exists());
+  CHECK_FALSE(headroom::PresetManager::getSavedFilesDirectory().exists());
 
   const auto changeEverything = [&amp] {
     REQUIRE(amp.setParameter(params::fuzzOn, 0.0f));
@@ -1895,10 +1896,10 @@ TEST_CASE("A saved preset carries its capture and IR", "[agent][presets]") {
   };
   const auto checkRestored = [&] {
     const juce::File model(amp.getModel().source), ir(amp.getIr().source);
-    CHECK(model.isAChildOf(evil::PresetManager::getSavedFilesDirectory()));
+    CHECK(model.isAChildOf(headroom::PresetManager::getSavedFilesDirectory()));
     CHECK(model.getFileExtension() == ".nam");
     CHECK(sameBytes(model, testData("parity_wavenet.nam")));
-    CHECK(ir.isAChildOf(evil::PresetManager::getSavedFilesDirectory()));
+    CHECK(ir.isAChildOf(headroom::PresetManager::getSavedFilesDirectory()));
     CHECK(sameBytes(ir, testData("parity_output.wav")));
     CHECK(rig.state.getRawParameterValue(params::fuzzOn)->load() == 1.0f);
     CHECK(rig.state.getRawParameterValue(params::eqBands[4])->load() == Catch::Approx(3.0f));
@@ -1914,9 +1915,9 @@ TEST_CASE("A saved preset carries its capture and IR", "[agent][presets]") {
     REQUIRE(rig.presets.saveUserPreset("My Tone Again", error, &warning));
     CHECK(warning.isEmpty());
     const auto again =
-        evil::PresetManager::getUserPresetDirectory().getChildFile("My Tone Again.evilpreset");
+        headroom::PresetManager::getUserPresetDirectory().getChildFile("My Tone Again.headroompreset");
     CHECK(carriedFiles(again) == 2);
-    REQUIRE(evil::PresetManager::getSavedFilesDirectory().deleteRecursively());
+    REQUIRE(headroom::PresetManager::getSavedFilesDirectory().deleteRecursively());
     changeEverything();
     loadPreset(rig, "My Tone Again");
     checkRestored();
@@ -1934,7 +1935,7 @@ TEST_CASE("A saved preset carries its capture and IR", "[agent][presets]") {
     loadPreset(rig, "My Tone");
     CHECK(amp.getModel().source == nam.getFullPathName());
     CHECK(amp.getIr().source == wav.getFullPathName());
-    CHECK_FALSE(evil::PresetManager::getSavedFilesDirectory().exists());
+    CHECK_FALSE(headroom::PresetManager::getSavedFilesDirectory().exists());
   }
   SECTION("if a file has changed since, it's the one that was saved that comes back") {
     REQUIRE(nam.replaceWithText("{\"a\":\"different capture altogether\"}"));
@@ -1969,10 +1970,10 @@ TEST_CASE("A big file survives the trip byte for byte", "[agent][presets]") {
   const auto big = files.dir.getChildFile("big.nam");
   REQUIRE(big.replaceWithData(data.getData(), data.getSize()));
 
-  evil::PresetManager::Sources applied;
-  evil::PresetManager presets(
-      rig.state, [&big] { return evil::PresetManager::Sources{big.getFullPathName(), {}}; },
-      [&applied](const evil::PresetManager::Sources &s) { applied = s; });
+  headroom::PresetManager::Sources applied;
+  headroom::PresetManager presets(
+      rig.state, [&big] { return headroom::PresetManager::Sources{big.getFullPathName(), {}}; },
+      [&applied](const headroom::PresetManager::Sources &s) { applied = s; });
   juce::String error, warning;
   REQUIRE(presets.saveUserPreset("Big", error, &warning));
   CHECK(warning.isEmpty());
@@ -1998,7 +1999,7 @@ TEST_CASE("A preset that can't carry a file still saves, and says so", "[agent][
   CHECK(warning.contains("capture"));
   CHECK(warning.contains("gone.nam"));
   const auto saved =
-      evil::PresetManager::getUserPresetDirectory().getChildFile("Without.evilpreset");
+      headroom::PresetManager::getUserPresetDirectory().getChildFile("Without.headroompreset");
   CHECK(carriedFiles(saved) == 0); // the built-in IR needs no carrying, and isn't warned about
   CHECK_FALSE(warning.contains("IR"));
 
@@ -2015,8 +2016,8 @@ TEST_CASE("A preset of built-ins carries nothing, and an old one still loads", "
   juce::String error, warning;
   REQUIRE(rig.presets.saveUserPreset("Built in", error, &warning));
   CHECK(warning.isEmpty());
-  CHECK(carriedFiles(evil::PresetManager::getUserPresetDirectory().getChildFile(
-            "Built in.evilpreset")) == 0);
+  CHECK(carriedFiles(headroom::PresetManager::getUserPresetDirectory().getChildFile(
+            "Built in.headroompreset")) == 0);
   loadPreset(rig, "Built in");
   CHECK(rig.amp.getModel().source == "builtin:BlackstarHT1");
 
@@ -2027,9 +2028,42 @@ TEST_CASE("A preset of built-ins carries nothing, and an old one still loads", "
   old.setAttribute("name", "Old");
   old.setAttribute("model", nam.getFullPathName());
   old.setAttribute("ir", params::defaultIrSource);
-  REQUIRE(old.writeTo(evil::PresetManager::getUserPresetDirectory().getChildFile("Old.evilpreset")));
+  REQUIRE(old.writeTo(headroom::PresetManager::getUserPresetDirectory().getChildFile("Old.headroompreset")));
   loadPreset(rig, "Old");
   CHECK(rig.amp.getModel().source == nam.getFullPathName());
+}
+
+TEST_CASE("Upgrading from Evil Amplifier brings its folder along", "[presets]") {
+  const auto root = juce::File::createTempFile("headroom-upgrade");
+  REQUIRE(root.createDirectory());
+  const auto legacy = root.getChildFile("EvilAmplifier");
+  const auto dir = root.getChildFile("Headroom");
+  REQUIRE(legacy.getChildFile("Presets").createDirectory());
+  REQUIRE(legacy.getChildFile("settings.xml").replaceWithText("keys"));
+  REQUIRE(legacy.getChildFile("tunings.xml").replaceWithText("old"));
+  REQUIRE(legacy.getChildFile("EvilAmplifier.log").replaceWithText("log"));
+  REQUIRE(legacy.getChildFile("Presets/Mine.evilpreset").replaceWithText("<Preset/>"));
+
+  SECTION("into a new folder") {
+    headroom::moveLegacyDataDirectory(legacy, dir);
+    CHECK_FALSE(legacy.exists());
+    CHECK(dir.getChildFile("settings.xml").loadFileAsString() == "keys");
+    CHECK(dir.getChildFile("Headroom.log").loadFileAsString() == "log");
+    CHECK(dir.getChildFile("Presets/Mine.headroompreset").existsAsFile());
+    CHECK_FALSE(dir.getChildFile("Presets/Mine.evilpreset").exists());
+  }
+  SECTION("into one already there, replacing nothing in it") {
+    REQUIRE(dir.getChildFile("Presets").createDirectory());
+    REQUIRE(dir.getChildFile("tunings.xml").replaceWithText("new"));
+    REQUIRE(dir.getChildFile("Presets/Theirs.headroompreset").replaceWithText("<Preset/>"));
+    headroom::moveLegacyDataDirectory(legacy, dir);
+    CHECK(dir.getChildFile("settings.xml").loadFileAsString() == "keys");
+    CHECK(dir.getChildFile("tunings.xml").loadFileAsString() == "new");
+    CHECK(legacy.getChildFile("tunings.xml").loadFileAsString() == "old");
+    CHECK(dir.getChildFile("Presets/Mine.headroompreset").existsAsFile());
+    CHECK(dir.getChildFile("Presets/Theirs.headroompreset").existsAsFile());
+  }
+  root.deleteRecursively();
 }
 
 TEST_CASE("A carried TONE3000 file keeps its credit and what it is", "[agent][presets]") {
@@ -2045,7 +2079,7 @@ TEST_CASE("A carried TONE3000 file keeps its credit and what it is", "[agent][pr
   const juce::String attribution = R"json({"credit":"Twin by someone (CC BY)",
                                            "url":"https://www.tone3000.com/tones/twin-36640",
                                            "gear":"amp-cab"})json";
-  REQUIRE(dir.getChildFile(evil::PresetManager::attributionFileName).replaceWithText(attribution));
+  REQUIRE(dir.getChildFile(headroom::PresetManager::attributionFileName).replaceWithText(attribution));
 
   HeadlessRig rig;
   REQUIRE(rig.amp.loadModel(nam.getFullPathName()).isEmpty());
@@ -2068,7 +2102,7 @@ TEST_CASE("A carried TONE3000 file keeps its credit and what it is", "[agent][pr
   // Beyond what the amp has put there, a file beside it means nothing.
   const auto elsewhere = files.dir.getChildFile("elsewhere");
   REQUIRE(elsewhere.createDirectory());
-  REQUIRE(elsewhere.getChildFile(evil::PresetManager::attributionFileName)
+  REQUIRE(elsewhere.getChildFile(headroom::PresetManager::attributionFileName)
               .replaceWithText(R"({"credit":"Not real"})"));
   CHECK(Tone3000::creditForSource(elsewhere.getChildFile("x.nam").getFullPathName()).isEmpty());
 }
@@ -2076,9 +2110,9 @@ TEST_CASE("A carried TONE3000 file keeps its credit and what it is", "[agent][pr
 TEST_CASE("A preset from anywhere can't choose where its files go", "[agent][presets]") {
   TestFiles files;
   HeadlessRig rig;
-  const auto presetDir = evil::PresetManager::getUserPresetDirectory();
+  const auto presetDir = headroom::PresetManager::getUserPresetDirectory();
   REQUIRE(presetDir.createDirectory());
-  const auto savedFiles = evil::PresetManager::getSavedFilesDirectory();
+  const auto savedFiles = headroom::PresetManager::getSavedFilesDirectory();
   const juce::String body = R"({"version":"0.5.4"})";
   const auto encoded = juce::Base64::toBase64(body.toRawUTF8(), body.getNumBytesAsUTF8());
 
@@ -2092,7 +2126,7 @@ TEST_CASE("A preset from anywhere can't choose where its files go", "[agent][pre
     carried->setAttribute("for", role);
     carried->setAttribute("name", name);
     carried->addTextElement(text);
-    REQUIRE(preset.writeTo(presetDir.getChildFile("Stranger.evilpreset")));
+    REQUIRE(preset.writeTo(presetDir.getChildFile("Stranger.headroompreset")));
     loadPreset(rig, "Stranger");
     return rig.chain.getModels().getRequestedSource();
   };
@@ -2106,8 +2140,8 @@ TEST_CASE("A preset from anywhere can't choose where its files go", "[agent][pre
   };
 
   SECTION("a name that tries to climb out stays in") {
-    for (const auto *name : {"../../../evil.nam", "..\\..\\..\\evil.nam", "/tmp/evil.nam",
-                             "sub/dir/evil.nam", "C:\\evil.nam"}) {
+    for (const auto *name : {"../../../attacker.nam", "..\\..\\..\\attacker.nam", "/tmp/attacker.nam",
+                             "sub/dir/attacker.nam", "C:\\attacker.nam"}) {
       INFO(name);
       const juce::File where(loadWith("model", name, encoded));
       CHECK(where.isAChildOf(savedFiles));
@@ -2117,18 +2151,18 @@ TEST_CASE("A preset from anywhere can't choose where its files go", "[agent][pre
     }
   }
   SECTION("a file that isn't the kind its slot loads isn't written") {
-    for (const auto *name : {"evil.sh", "evil", "evil.nam.desktop", "..", ".", ""}) {
+    for (const auto *name : {"attacker.sh", "attacker", "attacker.nam.desktop", "..", ".", ""}) {
       INFO(name);
       CHECK(loadWith("model", name, encoded) == "/no/such/capture.nam");
     }
-    CHECK(loadWith("ir", "evil.nam", encoded) == "/no/such/capture.nam");
+    CHECK(loadWith("ir", "attacker.nam", encoded) == "/no/such/capture.nam");
     CHECK(rig.chain.getCab().getSource() != savedFiles.getFullPathName());
     CHECK_FALSE(savedFiles.exists());
   }
   SECTION("anything else it might be is ignored") {
-    CHECK(loadWith("something", "evil.nam", encoded) == "/no/such/capture.nam");
-    CHECK(loadWith("model", "evil.nam", "!!! not base 64 !!!") == "/no/such/capture.nam");
-    CHECK(loadWith("model", "evil.nam", "") == "/no/such/capture.nam");
+    CHECK(loadWith("something", "attacker.nam", encoded) == "/no/such/capture.nam");
+    CHECK(loadWith("model", "attacker.nam", "!!! not base 64 !!!") == "/no/such/capture.nam");
+    CHECK(loadWith("model", "attacker.nam", "") == "/no/such/capture.nam");
     CHECK_FALSE(savedFiles.exists());
   }
   SECTION("the same file is only kept once, whatever it's called") {
@@ -2156,7 +2190,7 @@ TEST_CASE("Going back holds the level down until the old model is playing", "[ag
     void run() override {
       while (!threadShouldExit()) {
         const auto loading = rig.chain.getModels().getStatus().state ==
-                             evil::ModelManager::State::loading;
+                             headroom::ModelManager::State::loading;
         const auto output = rig.state.getRawParameterValue(params::output)->load();
         if (loading) {
           sawLoading = true;
@@ -2254,7 +2288,7 @@ TEST_CASE("Keys stay private, and out of presets", "[agent]") {
 }
 
 TEST_CASE("Another process saving doesn't lose the sign-in", "[agent]") {
-  // The standalone, a DAW and evil-cli are separate processes on one file.
+  // The standalone, a DAW and headroom-cli are separate processes on one file.
   TestFiles files;
   const auto file = files.dir.getChildFile("agent.xml");
   AgentSettings amp, cli;

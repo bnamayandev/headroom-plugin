@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace evil {
+namespace headroom {
 /** Finds the pitch of a single note with YIN (de Cheveigne & Kawahara, 2002),
    for the tuner. Not for the audio thread: an analysis takes a millisecond or
    so, so the GUI pulls samples from a SampleTap and does the work there.
@@ -47,4 +47,4 @@ private:
   std::size_t recentNext = 0, recentCount = 0;
   double steady = 0.0, silentFor = 0.0;
 };
-} // namespace evil
+} // namespace headroom

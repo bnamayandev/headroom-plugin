@@ -3,13 +3,25 @@
 #include <juce_core/juce_core.h>
 
 #if defined(JucePlugin_Build_Standalone) && JucePlugin_Build_Standalone
-#include "gui/EvilLookAndFeel.h"
+#include "gui/HeadroomLookAndFeel.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_audio_plugin_client/Standalone/juce_StandaloneFilterWindow.h>
 
-namespace evil::standalone {
+namespace headroom::standalone {
 namespace {
+/** Where JUCE's standalone keeps the settings of an app with this name. */
+juce::PropertiesFile::Options settingsOptions(const juce::String &name) {
+  juce::PropertiesFile::Options options;
+  options.applicationName = name;
+  options.filenameSuffix = ".settings";
+  options.osxLibrarySubFolder = "Application Support";
+#if JUCE_LINUX || JUCE_BSD
+  options.folderName = "~/.config";
+#endif
+  return options;
+}
+
 /** JUCE's standalone window without its title bar: the editor's header does
     that job. JUCE keeps a thin border around the content for resizing, painted
     here in the editor's background. */
@@ -37,13 +49,13 @@ public:
 class App final : public juce::JUCEApplication {
 public:
   App() {
-    juce::PropertiesFile::Options options;
-    options.applicationName = juce::CharPointer_UTF8(JucePlugin_Name);
-    options.filenameSuffix = ".settings";
-    options.osxLibrarySubFolder = "Application Support";
-#if JUCE_LINUX || JUCE_BSD
-    options.folderName = "~/.config";
-#endif
+    const auto options = settingsOptions(juce::CharPointer_UTF8(JucePlugin_Name));
+    // The audio setup and last state, saved under the amp's old name until it was
+    // renamed Headroom.
+    const auto file = options.getDefaultFile();
+    const auto legacy = settingsOptions("Evil Amplifier").getDefaultFile();
+    if (!file.exists() && legacy.existsAsFile() && file.getParentDirectory().createDirectory())
+      legacy.moveFileTo(file);
     properties.setStorageParameters(options);
   }
 
@@ -127,20 +139,20 @@ void closeWindow() {
   if (auto *window = findWindow())
     window->closeButtonPressed();
 }
-} // namespace evil::standalone
+} // namespace headroom::standalone
 
 // With JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP set, JUCE's wrapper calls this.
-JUCE_CREATE_APPLICATION_DEFINE(evil::standalone::App)
+JUCE_CREATE_APPLICATION_DEFINE(headroom::standalone::App)
 
 #else
 
-namespace evil::standalone {
+namespace headroom::standalone {
 void showAudioSettings() {}
 void saveState() {}
 void loadState() {}
 void resetToDefaultState() {}
 void minimiseWindow() {}
 void closeWindow() {}
-} // namespace evil::standalone
+} // namespace headroom::standalone
 
 #endif

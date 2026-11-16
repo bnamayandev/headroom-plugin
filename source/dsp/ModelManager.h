@@ -12,7 +12,7 @@
 #include <mutex>
 #include <thread>
 
-namespace evil {
+namespace headroom {
 /** Owns the neural amp model and moves new ones onto the audio thread without
    blocking it.
 
@@ -154,4 +154,4 @@ private:
   std::uint64_t requestIdForWorker = 0;
   std::thread worker;
 };
-} // namespace evil
+} // namespace headroom

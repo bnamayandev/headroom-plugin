@@ -1,6 +1,7 @@
 #include "Tone3000.h"
 
 #include "Json.h"
+#include "state/DataDirectory.h"
 #include "state/PresetManager.h"
 
 #include <juce_cryptography/juce_cryptography.h>
@@ -9,7 +10,7 @@
 #include <mutex>
 #include <random>
 
-namespace evil::agent {
+namespace headroom::agent {
 namespace {
 constexpr const char *origin = "https://www.tone3000.com";
 constexpr juce::int64 maxFileBytes = 64 * 1024 * 1024;
@@ -55,7 +56,7 @@ HttpRequest formPost(const juce::String &url, const juce::String &body) {
 void answerBrowser(juce::StreamingSocket &socket, int status,
                    const juce::String &message) {
   const juce::String html =
-      "<!doctype html><meta charset=utf-8><title>Evil Amplifier</title>"
+      "<!doctype html><meta charset=utf-8><title>Headroom</title>"
       "<body style=\"background:#2b2a27;color:#ece6d8;font:16px sans-serif;"
       "display:flex;align-items:center;justify-content:center;height:90vh\">"
       "<p>" + message + "</p></body>";
@@ -261,7 +262,7 @@ Tone3000::CatalogPick Tone3000::browseCatalog(const ShouldCancel &shouldCancel,
     }
     callback = candidate;
     answerBrowser(*connection, 200,
-                  "All done. You can close this tab and go back to Evil Amplifier.");
+                  "All done. You can close this tab and go back to Headroom.");
     break;
   }
 
@@ -537,10 +538,7 @@ juce::String Tone3000::credit(const juce::var &tone) {
 juce::File Tone3000::getLibraryDirectory() {
   if (libraryOverride != juce::File())
     return libraryOverride;
-  return juce::File::getSpecialLocation(
-             juce::File::userApplicationDataDirectory)
-      .getChildFile("EvilAmplifier")
-      .getChildFile("Tone3000");
+  return getDataDirectory().getChildFile("Tone3000");
 }
 
 void Tone3000::setLibraryDirectoryForTesting(const juce::File &dir) {
@@ -650,4 +648,4 @@ juce::String Tone3000::sniffExtension(const juce::MemoryBlock &data) {
   }
   return {};
 }
-} // namespace evil::agent
+} // namespace headroom::agent

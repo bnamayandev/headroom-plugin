@@ -1,10 +1,12 @@
 #include "Tunings.h"
 
+#include "DataDirectory.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-namespace evil::tuning {
+namespace headroom::tuning {
 namespace {
 constexpr std::array<const char *, 12> sharpNames{
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
@@ -170,10 +172,7 @@ TuningLibrary::TuningLibrary(juce::File f)
 }
 
 juce::File TuningLibrary::getDefaultFile() {
-  return juce::File::getSpecialLocation(
-             juce::File::userApplicationDataDirectory)
-      .getChildFile("EvilAmplifier")
-      .getChildFile("tunings.xml");
+  return getDataDirectory().getChildFile("tunings.xml");
 }
 
 void TuningLibrary::load() {
@@ -267,4 +266,4 @@ void TuningLibrary::deleteUserTuning(const juce::String &name) {
   save();
   sendChangeMessage();
 }
-} // namespace evil::tuning
+} // namespace headroom::tuning

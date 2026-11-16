@@ -1,11 +1,11 @@
-Evil Amplifier for Linux (x86-64)
-=================================
+Headroom for Linux (x86-64)
+===========================
 
-VST3: copy "Evil Amplifier.vst3" to ~/.vst3/ and rescan in your DAW (Reaper, Bitwig,
+VST3: copy "Headroom.vst3" to ~/.vst3/ and rescan in your DAW (Reaper, Bitwig,
 Ardour, Carla).
 
-Standalone: run "./Evil Amplifier". With PipeWire, start it as
-  PIPEWIRE_QUANTUM=128/48000 pw-jack "./Evil Amplifier"
+Standalone: run "./Headroom". With PipeWire, start it as
+  PIPEWIRE_QUANTUM=128/48000 pw-jack "./Headroom"
 and pick JACK in Settings for the lowest latency (needs the pipewire-jack package);
 ALSA also works. Click "Settings..." on the yellow banner: choose your interface, enable
 only your guitar's input, and untick "Mute audio input".
@@ -14,3 +14,8 @@ The agent tab needs libcurl for HTTPS, which most systems already have (on Debia
 sudo apt install libcurl4). The rest of the amp runs without it.
 
 Building from source gives you scripts/install-linux.sh, which also adds an app-menu entry.
+
+Upgrading from Evil Amplifier (the amp's old name): delete ~/.vst3/"Evil Amplifier.vst3"
+first (scripts/install-linux.sh does it for you). Your DAW sees Headroom as the same
+plugin, so saved sessions open with it, and your presets, settings and API keys move across
+the first time it runs.

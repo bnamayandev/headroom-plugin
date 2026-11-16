@@ -2,7 +2,7 @@
 
 #include <atomic>
 
-namespace evil::test {
+namespace headroom::test {
 /** While alive, counts every heap allocation and free made by the constructing
  * thread. */
 class ScopedAllocationTracking {
@@ -26,4 +26,4 @@ public:
 /** True when malloc/free themselves are tracked, not just operator new/delete.
  */
 bool interposesCAllocator() noexcept;
-} // namespace evil::test
+} // namespace headroom::test

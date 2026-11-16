@@ -2,23 +2,27 @@
 
 #include "PluginEditor.h"
 #include "PipeWireJack.h"
+#include "state/DataDirectory.h"
 
-namespace evil {
+namespace headroom {
 namespace {
 constexpr int bypassDelayCapacity = 1 << 14;
 } // namespace
 
-SharedLogFile::SharedLogFile()
-    : logger(juce::FileLogger::createDefaultAppLogger(
-          "EvilAmplifier", "EvilAmplifier.log",
-          "Evil Amplifier " JucePlugin_VersionString)) {}
+SharedLogFile::SharedLogFile() {
+  // On Linux and Windows the log is in the data folder: bring the old folder over
+  // before the logger makes a new one.
+  getDataDirectory();
+  logger.reset(juce::FileLogger::createDefaultAppLogger(
+      "Headroom", "Headroom.log", "Headroom " JucePlugin_VersionString));
+}
 
-EvilAmplifierProcessor::EvilAmplifierProcessor()
+HeadroomProcessor::HeadroomProcessor()
     : AudioProcessor(
           BusesProperties()
               .withInput("Input", juce::AudioChannelSet::mono(), true)
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-      state(*this, nullptr, "EvilAmplifier", params::createLayout()),
+      state(*this, nullptr, "Headroom", params::createLayout()),
       snapshot(state),
       presets(
           state,
@@ -49,13 +53,13 @@ EvilAmplifierProcessor::EvilAmplifierProcessor()
   startTimerHz(10);
 }
 
-EvilAmplifierProcessor::~EvilAmplifierProcessor() {
+HeadroomProcessor::~HeadroomProcessor() {
   stopTimer();
   appSettings->removeChangeListener(this);
   getModels().removeChangeListener(this);
 }
 
-bool EvilAmplifierProcessor::isBusesLayoutSupported(
+bool HeadroomProcessor::isBusesLayoutSupported(
     const BusesLayout &layouts) const {
   const auto in = layouts.getMainInputChannelSet();
   const auto out = layouts.getMainOutputChannelSet();
@@ -66,8 +70,8 @@ bool EvilAmplifierProcessor::isBusesLayoutSupported(
   return monoOrStereo(in) && monoOrStereo(out);
 }
 
-void EvilAmplifierProcessor::prepareToPlay(double sampleRate,
-                                           int samplesPerBlock) {
+void HeadroomProcessor::prepareToPlay(double sampleRate,
+                                      int samplesPerBlock) {
   prepared = false;
   currentSampleRate = sampleRate;
   const int maxBlock = juce::jmax(1, samplesPerBlock);
@@ -85,9 +89,9 @@ void EvilAmplifierProcessor::prepareToPlay(double sampleRate,
   prepared = true;
 }
 
-void EvilAmplifierProcessor::releaseResources() { prepared = false; }
+void HeadroomProcessor::releaseResources() { prepared = false; }
 
-void EvilAmplifierProcessor::writeBypassHistory(
+void HeadroomProcessor::writeBypassHistory(
     const juce::AudioBuffer<float> &buffer, int startSample,
     int numSamples) noexcept {
   // Keeps the most recent input so engaging bypass outputs correctly delayed
@@ -108,8 +112,8 @@ void EvilAmplifierProcessor::writeBypassHistory(
   bypassWrite = (bypassWrite + numSamples) & (bypassDelayCapacity - 1);
 }
 
-void EvilAmplifierProcessor::processBlock(juce::AudioBuffer<float> &buffer,
-                                          juce::MidiBuffer &) {
+void HeadroomProcessor::processBlock(juce::AudioBuffer<float> &buffer,
+                                     juce::MidiBuffer &) {
   juce::ScopedNoDenormals noDenormals;
   const auto startTicks = juce::Time::getHighResolutionTicks();
   const int n = buffer.getNumSamples();
@@ -156,7 +160,7 @@ void EvilAmplifierProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   cpu.record((float)(elapsed * currentSampleRate / n));
 }
 
-void EvilAmplifierProcessor::processBlockBypassed(
+void HeadroomProcessor::processBlockBypassed(
     juce::AudioBuffer<float> &buffer, juce::MidiBuffer &) {
   const int n = buffer.getNumSamples();
   const int numIn = getTotalNumInputChannels();
@@ -188,31 +192,31 @@ void EvilAmplifierProcessor::processBlockBypassed(
   chime.process(buffer.getArrayOfWritePointers(), numOut, n);
 }
 
-juce::AudioProcessorEditor *EvilAmplifierProcessor::createEditor() {
-  return new EvilAmplifierEditor(*this);
+juce::AudioProcessorEditor *HeadroomProcessor::createEditor() {
+  return new HeadroomEditor(*this);
 }
 
-int EvilAmplifierProcessor::getNumPrograms() {
+int HeadroomProcessor::getNumPrograms() {
   return juce::jmax(1, presets.getNumFactoryPresets());
 }
 
-int EvilAmplifierProcessor::getCurrentProgram() {
+int HeadroomProcessor::getCurrentProgram() {
   const auto index = presets.getCurrentIndex();
   return index < presets.getNumFactoryPresets() ? index : 0;
 }
 
-void EvilAmplifierProcessor::setCurrentProgram(int index) {
+void HeadroomProcessor::setCurrentProgram(int index) {
   if (juce::isPositiveAndBelow(index, presets.getNumFactoryPresets()))
     presets.load(index);
 }
 
-const juce::String EvilAmplifierProcessor::getProgramName(int index) {
+const juce::String HeadroomProcessor::getProgramName(int index) {
   if (juce::isPositiveAndBelow(index, presets.getNumFactoryPresets()))
     return presets.getNames()[index];
   return {};
 }
 
-void EvilAmplifierProcessor::getStateInformation(juce::MemoryBlock &destData) {
+void HeadroomProcessor::getStateInformation(juce::MemoryBlock &destData) {
   auto tree = state.copyState();
   tree.setProperty(params::modelSourceProperty,
                    getModels().getRequestedSource(), nullptr);
@@ -221,9 +225,11 @@ void EvilAmplifierProcessor::getStateInformation(juce::MemoryBlock &destData) {
     copyXmlToBinary(*xml, destData);
 }
 
-void EvilAmplifierProcessor::setStateInformation(const void *data,
-                                                 int sizeInBytes) {
+void HeadroomProcessor::setStateInformation(const void *data,
+                                            int sizeInBytes) {
   const auto xml = getXmlFromBinary(data, sizeInBytes);
+  if (xml != nullptr && xml->hasTagName(params::legacyStateType))
+    xml->setTagName(state.state.getType().toString());
   if (xml == nullptr || !xml->hasTagName(state.state.getType()))
     return;
 
@@ -254,7 +260,7 @@ void EvilAmplifierProcessor::setStateInformation(const void *data,
   applySources(sources);
 }
 
-void EvilAmplifierProcessor::applySources(
+void HeadroomProcessor::applySources(
     const PresetManager::Sources &sources) {
   if (sources.model.isEmpty()) {
     if (getModels().getRequestedSource().isNotEmpty())
@@ -270,8 +276,8 @@ void EvilAmplifierProcessor::applySources(
   }
 }
 
-bool EvilAmplifierProcessor::loadIr(const juce::String &source,
-                                    juce::String &error) {
+bool HeadroomProcessor::loadIr(const juce::String &source,
+                               juce::String &error) {
   const bool ok = getCab().load(source, error);
   {
     const juce::ScopedLock lock(irErrorLock);
@@ -282,18 +288,18 @@ bool EvilAmplifierProcessor::loadIr(const juce::String &source,
   return ok;
 }
 
-juce::String EvilAmplifierProcessor::getLastIrError() const {
+juce::String HeadroomProcessor::getLastIrError() const {
   const juce::ScopedLock lock(irErrorLock);
   return lastIrError;
 }
 
-void EvilAmplifierProcessor::loadModel(const juce::String &source) {
+void HeadroomProcessor::loadModel(const juce::String &source) {
   getModels().requestLoad(source);
 }
 
-void EvilAmplifierProcessor::unloadModel() { getModels().requestUnload(); }
+void HeadroomProcessor::unloadModel() { getModels().requestUnload(); }
 
-void EvilAmplifierProcessor::updateLatency() {
+void HeadroomProcessor::updateLatency() {
   const int latency = chain.getLatencySamples();
   if (latency != getLatencySamples()) {
     setLatencySamples(latency);
@@ -302,7 +308,7 @@ void EvilAmplifierProcessor::updateLatency() {
   reportedLatency = latency;
 }
 
-void EvilAmplifierProcessor::timerCallback() {
+void HeadroomProcessor::timerCallback() {
   getModels().collectGarbage();
   if (prepared)
     updateLatency();
@@ -326,7 +332,7 @@ void EvilAmplifierProcessor::timerCallback() {
            : juce::String()));
 }
 
-void EvilAmplifierProcessor::changeListenerCallback(juce::ChangeBroadcaster *source) {
+void HeadroomProcessor::changeListenerCallback(juce::ChangeBroadcaster *source) {
   if (source == &appSettings.get()) {
     const bool normalise = appSettings->isNormalisingVolume();
     if (normalise != chain.isMatchingLevels()) {
@@ -352,12 +358,12 @@ void EvilAmplifierProcessor::changeListenerCallback(juce::ChangeBroadcaster *sou
   }
 }
 
-void EvilAmplifierProcessor::log(const juce::String &message) {
+void HeadroomProcessor::log(const juce::String &message) {
   if (logFile->logger != nullptr)
     logFile->logger->logMessage(message);
 }
-} // namespace evil
+} // namespace headroom
 
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
-  return new evil::EvilAmplifierProcessor();
+  return new headroom::HeadroomProcessor();
 }

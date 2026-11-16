@@ -3,7 +3,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace evil {
+namespace headroom {
 namespace {
 constexpr double paperRate = 29761.0; // the rate the paper's lengths are in
 
@@ -151,4 +151,4 @@ void ReverbPedal::process(float *data, int n, const Settings &s) noexcept {
     data[i] = x + mix.getNextValue() * wet;
   }
 }
-} // namespace evil
+} // namespace headroom

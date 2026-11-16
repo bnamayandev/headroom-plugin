@@ -4,7 +4,7 @@
 #include <cmath>
 #include <numbers>
 
-namespace evil {
+namespace headroom {
 void Metronome::prepare(double newSampleRate) noexcept {
   sampleRate = newSampleRate;
   clickLength = (int)(0.04 * sampleRate);
@@ -59,4 +59,4 @@ void Metronome::process(float *data, int n, const Settings &s) noexcept {
     }
   }
 }
-} // namespace evil
+} // namespace headroom
