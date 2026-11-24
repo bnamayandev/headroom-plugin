@@ -898,11 +898,11 @@ TEST_CASE("Loading a capture ducks, swaps, then settles the level", "[agent]") {
 
   // The creator and licence stay with it, for the amp panel.
   const auto credit = Tone3000::creditForSource(loaded.getFullPathName());
-  CHECK(credit.contains("Vox AC30 Top Boost"));
-  CHECK(credit.contains("plugnplay"));
-  CHECK(credit.contains("CC BY"));
-  CHECK(Tone3000::creditForSource("/somewhere/else.nam").isEmpty());
-  CHECK(Tone3000::creditForSource("builtin:BlackstarHT1").isEmpty());
+  CHECK(credit.title == "Vox AC30 Top Boost");
+  CHECK(credit.byline.contains("plugnplay"));
+  CHECK(credit.byline.contains("CC BY"));
+  CHECK(Tone3000::creditForSource("/somewhere/else.nam").title.isEmpty());
+  CHECK(Tone3000::creditForSource("builtin:BlackstarHT1").title.isEmpty());
 
   // Bearer token on every call.
   for (const auto &request : http.getRequests())
@@ -2083,7 +2083,7 @@ TEST_CASE("A carried TONE3000 file keeps its credit and what it is", "[agent][pr
 
   HeadlessRig rig;
   REQUIRE(rig.amp.loadModel(nam.getFullPathName()).isEmpty());
-  CHECK(Tone3000::creditForSource(nam.getFullPathName()).contains("Twin by someone"));
+  CHECK(Tone3000::creditForSource(nam.getFullPathName()).title == "Twin");
   juce::String error;
   REQUIRE(rig.presets.saveUserPreset("With credit", error));
 
@@ -2095,7 +2095,8 @@ TEST_CASE("A carried TONE3000 file keeps its credit and what it is", "[agent][pr
   const auto restored = rig.amp.getModel().source;
   REQUIRE(restored.isNotEmpty());
   CHECK(restored != nam.getFullPathName());
-  CHECK(Tone3000::creditForSource(restored).contains("Twin by someone"));
+  CHECK(Tone3000::creditForSource(restored).title == "Twin");
+  CHECK(Tone3000::creditForSource(restored).byline == "by someone (CC BY)");
   CHECK(Tone3000::gearForSource(restored) == "amp-cab");
   CHECK(describeAmpState(rig.amp).contains("(has its own cabinet)"));
 
@@ -2104,7 +2105,7 @@ TEST_CASE("A carried TONE3000 file keeps its credit and what it is", "[agent][pr
   REQUIRE(elsewhere.createDirectory());
   REQUIRE(elsewhere.getChildFile(headroom::PresetManager::attributionFileName)
               .replaceWithText(R"({"credit":"Not real"})"));
-  CHECK(Tone3000::creditForSource(elsewhere.getChildFile("x.nam").getFullPathName()).isEmpty());
+  CHECK(Tone3000::creditForSource(elsewhere.getChildFile("x.nam").getFullPathName()).title.isEmpty());
 }
 
 TEST_CASE("A preset from anywhere can't choose where its files go", "[agent][presets]") {

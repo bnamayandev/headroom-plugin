@@ -796,7 +796,6 @@ void HeadroomEditor::refreshModelStatus() {
     break;
   case State::ready: {
     const auto &i = status.info;
-    modelName.setText(i.name, juce::dontSendNotification);
     juce::String details = i.architecture + ", " + juce::String(i.numWeights) +
                            " weights, " +
                            juce::String(i.sampleRate / 1000.0, 1) + " kHz";
@@ -804,10 +803,13 @@ void HeadroomEditor::refreshModelStatus() {
       details << ", held-out ESR " << formatEsr(i.testEsr);
     else if (i.validationEsr >= 0.0)
       details << ", validation ESR " << formatEsr(i.validationEsr);
-    if (const auto credit = agent::Tone3000::creditForSource(i.source);
-        credit.isNotEmpty())
-      details = credit + "\n" + details;
-    else if (i.gear.isNotEmpty())
+    // A TONE3000 capture goes by its title there, not its file's name.
+    const auto credit = agent::Tone3000::creditForSource(i.source);
+    modelName.setText(credit.title.isNotEmpty() ? credit.title : i.name,
+                      juce::dontSendNotification);
+    if (credit.title.isNotEmpty() && credit.byline.isNotEmpty())
+      details = credit.byline + "\n" + details;
+    else if (credit.title.isEmpty() && i.gear.isNotEmpty())
       details = i.gear + "\n" + details;
     modelDetails.setText(details, juce::dontSendNotification);
     break;
@@ -820,18 +822,20 @@ void HeadroomEditor::refreshModelStatus() {
 }
 
 void HeadroomEditor::refreshIrStatus() {
-  irName.setText(audioProcessor.getCab().getDisplayName().toUpperCase(),
-                 juce::dontSendNotification);
   const auto error = audioProcessor.getLastIrError();
   if (const auto source = audioProcessor.getCab().getSource();
       source != creditedIrSource) {
     creditedIrSource = source;
     irCredit = agent::Tone3000::creditForSource(source);
   }
+  irName.setText((irCredit.title.isNotEmpty() ? irCredit.title
+                                              : audioProcessor.getCab().getDisplayName())
+                     .toUpperCase(),
+                 juce::dontSendNotification);
   irDetails.setText(
-      error.isNotEmpty()      ? error
-      : irCredit.isNotEmpty() ? irCredit
-                              : juce::String("Zero-latency convolution; IR swaps crossfade"),
+      error.isNotEmpty()             ? error
+      : irCredit.byline.isNotEmpty() ? irCredit.byline
+                                     : juce::String("Zero-latency convolution; IR swaps crossfade"),
       juce::dontSendNotification);
   irDetails.setColour(juce::Label::textColourId, error.isNotEmpty()
                                                      ? gui::colours::yellow

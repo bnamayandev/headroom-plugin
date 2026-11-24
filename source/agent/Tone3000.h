@@ -71,12 +71,18 @@ public:
   static juce::String pageUrl(const juce::var &tone);
   /** "Title by creator (licence)", as TONE3000 requires it stays visible. */
   static juce::String credit(const juce::var &tone);
+  /** The credit without its title: "by creator (licence)". */
+  static juce::String byline(const juce::var &tone);
 
   /** Where downloads go. */
   static juce::File getLibraryDirectory();
   static void setLibraryDirectoryForTesting(const juce::File &);
-  /** For a loaded model or IR: its TONE3000 credit, or empty if it isn't one. */
-  static juce::String creditForSource(const juce::String &source);
+  /** For a loaded model or IR: its TONE3000 title, to name it by, and the
+      byline that goes with it. Both empty if it isn't one. */
+  struct Credit {
+    juce::String title, byline;
+  };
+  static Credit creditForSource(const juce::String &source);
   /** The gear its TONE3000 page says it is ("amp-cab"), or empty if it isn't one
       or was saved before that was kept. */
   static juce::String gearForSource(const juce::String &source);

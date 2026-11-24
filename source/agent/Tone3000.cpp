@@ -469,6 +469,8 @@ juce::File Tone3000::download(const juce::var &tone, const juce::var &model,
   const auto remember = [&] {
     dir.getChildFile(creditFileName)
         .replaceWithText(json::dump(json::object({{"credit", credit(tone)},
+                                                  {"title", tone["title"]},
+                                                  {"byline", byline(tone)},
                                                   {"url", pageUrl(tone)},
                                                   {"gear", tone["gear"]}})));
   };
@@ -520,17 +522,22 @@ juce::String Tone3000::pageUrl(const juce::var &tone) {
 }
 
 juce::String Tone3000::credit(const juce::var &tone) {
+  return (tone["title"].toString() + " " + byline(tone)).trim();
+}
+
+juce::String Tone3000::byline(const juce::var &tone) {
   const auto user = tone["user"];
   const auto displayName = user["display_name"].toString();
-  auto creator = displayName.isNotEmpty() ? displayName : user["username"].toString();
-  auto line = tone["title"].toString();
+  const auto creator = displayName.isNotEmpty() ? displayName : user["username"].toString();
+  juce::String line;
   if (creator.isNotEmpty())
-    line << " by " << creator;
+    line << "by " << creator;
   const auto license = tone["license"].toString();
   if (license.isNotEmpty())
-    line << " (" << (license == "t3k"   ? juce::String("T3K licence")
-                     : license == "cco" ? juce::String("CC0")
-                                        : license.toUpperCase().replace("-", " "))
+    line << (line.isEmpty() ? "(" : " (")
+         << (license == "t3k"   ? juce::String("T3K licence")
+             : license == "cco" ? juce::String("CC0")
+                                : license.toUpperCase().replace("-", " "))
          << ")";
   return line;
 }
@@ -557,9 +564,16 @@ static juce::var attributionFor(const juce::String &source) {
   return juce::JSON::parse(file.getSiblingFile(creditFileName).loadFileAsString());
 }
 
-juce::String Tone3000::creditForSource(const juce::String &source) {
-  const auto line = attributionFor(source)["credit"].toString();
-  return line.isNotEmpty() ? "TONE3000: " + line : juce::String();
+Tone3000::Credit Tone3000::creditForSource(const juce::String &source) {
+  const auto kept = attributionFor(source);
+  if (const auto title = kept["title"].toString(); title.isNotEmpty())
+    return {title, kept["byline"].toString()};
+  // Kept before the title was: split "title by creator (licence)" at its last "by".
+  const auto line = kept["credit"].toString();
+  const int by = line.lastIndexOf(" by ");
+  if (by < 0)
+    return {line, {}};
+  return {line.substring(0, by), line.substring(by + 1)};
 }
 
 juce::String Tone3000::gearForSource(const juce::String &source) {

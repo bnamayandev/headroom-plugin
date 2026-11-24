@@ -165,7 +165,8 @@ private:
   std::unique_ptr<juce::FileChooser> chooser;
   juce::File lastModelDirectory, lastIrDirectory;
   int textRefreshCounter = 0;
-  juce::String creditedIrSource, irCredit; // read from disk only when it changes
+  juce::String creditedIrSource; // its credit is read from disk only when it changes
+  agent::Tone3000::Credit irCredit;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HeadroomEditor)
 };
