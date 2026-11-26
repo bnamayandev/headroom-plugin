@@ -49,6 +49,28 @@ bool isProse(const juce::Button &button) {
   return button.getProperties()["prose"];
 }
 
+bool isConsole(const juce::Component &component) {
+  return component.getProperties()["console"];
+}
+
+/** A terminal's cursor: a block the width of a character, see-through so the
+    letter under it still reads. */
+class BlockCaret final : public juce::CaretComponent {
+public:
+  using juce::CaretComponent::CaretComponent;
+
+  void setCaretPosition(const juce::Rectangle<int> &characterArea) override {
+    juce::CaretComponent::setCaretPosition(characterArea);
+    const int width = juce::jmax(2, juce::roundToInt((float)characterArea.getHeight() * 0.5f));
+    setBounds(characterArea.withWidth(width).reduced(0, 1));
+  }
+
+  void paint(juce::Graphics &g) override {
+    g.setColour(findColour(caretColourId, true).withAlpha(0.6f));
+    g.fillRect(getLocalBounds());
+  }
+};
+
 bool isBipolar(const juce::Slider &slider) {
   return slider.getMinimum() < 0.0 && slider.getMaximum() > 0.0 &&
          std::abs(slider.getMinimum() + slider.getMaximum()) < 1.0e-6;
@@ -206,6 +228,10 @@ void setProse(juce::Button &button) {
 
 void setCompact(juce::Slider &slider) {
   slider.getProperties().set("compact", true);
+}
+
+void setConsole(juce::TextEditor &editor) {
+  editor.getProperties().set("console", true);
 }
 
 void setHeadline(juce::Label &label) {
@@ -639,11 +665,43 @@ void HeadroomLookAndFeel::drawAlertBox(juce::Graphics &g, juce::AlertWindow &ale
                          .toFloat());
 }
 
+void HeadroomLookAndFeel::fillTextEditorBackground(juce::Graphics &g, int width, int height,
+                                                   juce::TextEditor &editor) {
+  if (!isConsole(editor)) {
+    LookAndFeel_V4::fillTextEditorBackground(g, width, height, editor);
+    return;
+  }
+  using namespace colours;
+  const auto bounds = juce::Rectangle<int>(width, height).toFloat().reduced(0.5f);
+  const auto shape = bevelBox(bounds, juce::jmin(8.0f, bounds.getHeight() * 0.25f));
+  g.setColour(glass);
+  g.fillPath(shape);
+
+  // The prompt, level with the first line, lit while it's being typed into.
+  const bool focused = editor.hasKeyboardFocus(true) && editor.isEnabled();
+  const float y = (float)editor.getTopIndent() + editor.getFont().getHeight() * 0.5f;
+  juce::Path prompt;
+  prompt.startNewSubPath(12.0f, y - 4.5f);
+  prompt.lineTo(17.0f, y);
+  prompt.lineTo(12.0f, y + 4.5f);
+  strokeNeon(g, prompt, focused ? accent() : cyan.withAlpha(0.55f), 1.6f, focused ? 0.8f : 0.0f);
+}
+
 void HeadroomLookAndFeel::drawTextEditorOutline(juce::Graphics &g, int width, int height,
                                                 juce::TextEditor &editor) {
   if (dynamic_cast<juce::AlertWindow *>(editor.getParentComponent()) != nullptr ||
       !editor.isEnabled())
     return;
+  if (isConsole(editor)) {
+    using namespace colours;
+    const auto bounds = juce::Rectangle<int>(width, height).toFloat().reduced(0.5f);
+    const auto shape = bevelBox(bounds, juce::jmin(8.0f, bounds.getHeight() * 0.25f));
+    if (editor.hasKeyboardFocus(true))
+      strokeNeon(g, shape, accent(), 1.0f, 0.7f);
+    else
+      strokeNeon(g, shape, cyan.withAlpha(0.45f), 1.0f, 0.0f);
+    return;
+  }
   const auto bounds = juce::Rectangle<int>(width, height).toFloat();
   if (editor.hasKeyboardFocus(true) && !editor.isReadOnly()) {
     const auto colour = editor.findColour(juce::TextEditor::focusedOutlineColourId);
@@ -655,6 +713,12 @@ void HeadroomLookAndFeel::drawTextEditorOutline(juce::Graphics &g, int width, in
   }
   g.setColour(editor.findColour(juce::TextEditor::outlineColourId));
   g.drawRect(bounds, 1.0f);
+}
+
+juce::CaretComponent *HeadroomLookAndFeel::createCaretComponent(juce::Component *keyFocusOwner) {
+  if (keyFocusOwner != nullptr && isConsole(*keyFocusOwner))
+    return new BlockCaret(keyFocusOwner);
+  return LookAndFeel_V4::createCaretComponent(keyFocusOwner);
 }
 
 void HeadroomLookAndFeel::drawScrollbar(juce::Graphics &g, juce::ScrollBar &bar, int x, int y,

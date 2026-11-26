@@ -253,6 +253,99 @@ void drawTunnel(juce::Graphics &g, juce::Rectangle<float> area, juce::Point<floa
   }
 }
 
+void drawGlobe(juce::Graphics &g, juce::Point<float> centre, float radius, float turn,
+               float glow) {
+  using namespace colours;
+  constexpr float pi = juce::MathConstants<float>::pi;
+  constexpr float twoPi = juce::MathConstants<float>::twoPi;
+  constexpr float tilt = 0.42f; // the north pole leans towards the viewer
+  const float ct = std::cos(tilt), st = std::sin(tilt);
+
+  struct Projected {
+    juce::Point<float> at;
+    float depth; // towards the viewer when positive
+  };
+  const auto project = [&](float x, float y, float z) {
+    return Projected{centre + juce::Point<float>(x, -(y * ct - z * st)) * radius,
+                     y * st + z * ct};
+  };
+  // Traces a closed curve into the front or back path, splitting it where it
+  // goes round the back.
+  const auto trace = [](juce::Path &front, juce::Path &back, auto &&pointAt, int steps) {
+    bool started = false, wasFront = false;
+    juce::Point<float> last;
+    for (int i = 0; i <= steps; ++i) {
+      const Projected p = pointAt(twoPi * (float)i / (float)steps);
+      const bool isFront = p.depth >= 0.0f;
+      auto &path = isFront ? front : back;
+      if (!started || isFront != wasFront) {
+        path.startNewSubPath(started ? last : p.at);
+        started = true;
+        wasFront = isFront;
+      }
+      path.lineTo(p.at);
+      last = p.at;
+    }
+  };
+
+  juce::Path front, back;
+  for (int k = 0; k < 6; ++k) { // each one a pair of meridians, opposite each other
+    const float longitude = turn + pi * (float)k / 6.0f;
+    const float sx = std::sin(longitude), cx = std::cos(longitude);
+    trace(front, back,
+          [&](float t) { return project(std::cos(t) * sx, std::sin(t), std::cos(t) * cx); },
+          72);
+  }
+  for (const float latitude : {-0.95f, -0.5f, 0.0f, 0.5f, 0.95f}) {
+    const float r = std::cos(latitude), y = std::sin(latitude);
+    trace(front, back, [&](float u) { return project(r * std::sin(u), y, r * std::cos(u)); },
+          72);
+  }
+
+  // The orbit, rolled to cross the globe on a diagonal, and where the
+  // satellite on it has got to.
+  constexpr float orbit = 1.3f, roll = 0.36f;
+  const float cr = std::cos(roll), sr = std::sin(roll);
+  const auto onOrbit = [&](float u) {
+    return project(orbit * std::cos(u) * cr, orbit * std::cos(u) * sr, orbit * std::sin(u));
+  };
+  juce::Path orbitFront, orbitBack;
+  trace(orbitFront, orbitBack, onOrbit, 96);
+  const auto satellite = onOrbit(-3.0f * turn);
+  const auto drawSatellite = [&](bool inFront) {
+    const auto dot = juce::Rectangle<float>(5.0f, 5.0f).withCentre(satellite.at);
+    if (inFront)
+      drawLed(g, dot, true, accent());
+    else {
+      g.setColour(accent().withAlpha(0.35f));
+      g.fillRect(dot);
+    }
+  };
+
+  // Back to front: what's behind, the glass that dims it, then what's in front.
+  const float lit = juce::jlimit(0.0f, 1.0f, glow);
+  g.setColour(accent().withAlpha(0.22f + 0.1f * lit));
+  g.strokePath(orbitBack, juce::PathStrokeType(1.0f));
+  if (satellite.depth < 0.0f)
+    drawSatellite(false);
+  g.setColour(blue.withAlpha(0.6f));
+  g.strokePath(back, juce::PathStrokeType(1.0f));
+
+  const auto disc = circle(centre, radius);
+  g.setGradientFill(juce::ColourGradient(glass.withAlpha(0.35f), centre.translated(0.0f, -radius * 0.4f),
+                                         glass.withAlpha(0.8f), centre.translated(0.0f, radius),
+                                         false));
+  g.fillEllipse(disc);
+
+  strokeNeon(g, front, cyan.withAlpha(0.55f + 0.3f * lit), 1.0f, 0.35f * lit);
+  juce::Path rim;
+  rim.addEllipse(disc);
+  strokeNeon(g, rim, cyan, 1.3f, 0.9f * lit);
+  strokeNeon(g, orbitFront, accent().withAlpha(0.9f), 1.2f, 0.8f * lit);
+  if (satellite.depth >= 0.0f)
+    drawSatellite(true);
+}
+
 juce::Rectangle<float> drawPanel(juce::Graphics &g, juce::Rectangle<int> bounds,
                                  const juce::String &title, float reserveRight) {
   using namespace colours;

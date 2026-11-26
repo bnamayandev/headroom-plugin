@@ -20,6 +20,9 @@ public:
 
   /** At the editor's text rate, while this page shows. */
   void refresh();
+  /** At the editor's frame rate, while this page shows: moves the globe on the
+      empty screen and the lights that say it's working. */
+  void animate(float secondsSinceLast);
   /** The tab came into view. */
   void pageShown();
 
@@ -33,11 +36,17 @@ private:
   void changeListenerCallback(juce::ChangeBroadcaster *) override;
   void refreshProviderControls();
   void sendComposed();
+  /** Brings the transcript up to date, following it down if it was at the end. */
+  void updateTranscript();
   void setComposer(const juce::String &text);
+  void openKeys();
   /** Says what's missing, with a way to the keys, until it's added or sent. */
   void showMissingKey(bool tone3000);
   void updateNotice();
   void hideNotice();
+  /** How much of the title row the status takes, with the light before it. */
+  float statusWidth() const;
+  juce::Rectangle<float> statusArea() const;
 
   agent::Session &session;
   agent::AgentSettings &settings;
@@ -48,19 +57,21 @@ private:
   juce::ImageComponent tone3000Logo, t3kMark;
   juce::HyperlinkButton poweredBy;
 
+  // Before the transcript, which reads it as it's made.
+  enum class Missing { nothing, apiKey, tone3000 } missing = Missing::nothing;
   std::unique_ptr<Transcript> transcript;
   juce::Viewport viewport;
   juce::Label noticeLabel;
   juce::TextButton noticeButton{"open api keys"};
-  enum class Missing { nothing, apiKey, tone3000 } missing = Missing::nothing;
 
   juce::TextEditor composer;
   juce::TextButton sendButton{"send"};
 
-  juce::Rectangle<int> panelArea, screenArea;
+  juce::Rectangle<int> panelArea, screenArea, noticeArea;
   juce::Rectangle<float> headerRule;
   PaintCache frame;
   juce::String statusText;
   bool wasBusy = false;
+  float clock = 0.0f; // seconds, for what moves; wraps
 };
 } // namespace headroom::gui

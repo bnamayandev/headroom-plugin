@@ -13,8 +13,9 @@
 // page with a custom tuning, hearing notes played into the processor, and
 // settings.png: the settings popover open, with the yellow neon, app.png and
 // app-settings.png: the header and the popover as the standalone app has them,
-// and agent-no-key.png, agent-keys.png, agent-sign-in.png, agent-empty.png and agent-chat.png: the
-// agent tab, with made-up keys and a made-up conversation. The saved neon,
+// and agent-no-key.png, agent-keys.png, agent-sign-in.png, agent-empty.png, agent-chat.png and
+// agent-chat-top.png: the agent tab, with made-up keys and a made-up conversation, at its end
+// and scrolled back to its start. The saved neon,
 // tuning and keys are ignored, so every shot starts from the default and none
 // can show a real key.
 
@@ -368,6 +369,14 @@ int main(int argc, char **argv) {
   editor.reset();
   editor.reset(processor.createEditor());
   ok = save(*editor, dir.getChildFile("agent-chat.png"), 1.5f) && ok;
+  auto *agentPage = findChild<headroom::gui::AgentPage>(*editor);
+  if (auto *viewport = agentPage != nullptr ? findChild<juce::Viewport>(*agentPage) : nullptr) {
+    viewport->setViewPosition(0, 0);
+    ok = save(*editor, dir.getChildFile("agent-chat-top.png"), 1.5f) && ok;
+  } else {
+    std::cout << "FAILED: no agent transcript" << std::endl;
+    ok = false;
+  }
 
   editor.reset();
   processor.releaseResources();

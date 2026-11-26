@@ -635,6 +635,8 @@ void HeadroomEditor::timerCallback() {
       tunerPage.push(samples.data(), n);
   if (tunerPage.isVisible())
     tunerPage.refresh(audioProcessor.getSampleRate(), interval);
+  if (agentPage.isVisible())
+    agentPage.animate(interval);
 
   const auto clicks = audioProcessor.getMetronome().getClickCount();
   if (clicks != lastClickCount) {

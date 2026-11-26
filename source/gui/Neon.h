@@ -80,6 +80,12 @@ void drawFloorGrid(juce::Graphics &, juce::Rectangle<float> floor, juce::Colour,
 void drawTunnel(juce::Graphics &, juce::Rectangle<float> area, juce::Point<float> centre,
                 juce::Colour, float travel = 0.0f);
 
+/** A globe in wireframe, as a network's news ident spins one: meridians turned
+    `turn` radians about its axis, its far side dim behind the glass, and a
+    satellite in the accent going round it on a tilted orbit. */
+void drawGlobe(juce::Graphics &, juce::Point<float> centre, float radius, float turn,
+               float glow = 1.0f);
+
 /** A panel: a bevelled frame on the black, its title at the top left followed
     by a rule. The rule stops `reserveRight` short of its row, leaving room for
     an indicator there. Returns the row. */

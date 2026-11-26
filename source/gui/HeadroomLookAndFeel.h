@@ -76,6 +76,10 @@ void setTab(juce::Button &);
 void setProse(juce::Button &);
 /** Marks a slider as one of the small knobs on a pedal: smaller value text. */
 void setCompact(juce::Slider &);
+/** Draws a TextEditor as a terminal's input line: a bevelled field with a
+    prompt at its left and a block cursor. Leave room for the prompt with a left
+    indent of at least 28. */
+void setConsole(juce::TextEditor &);
 /** Draws a Label's text with the colour fringes of a misconverged tube, and a
     glow: for headlines that change, e.g. the loaded model's name. */
 void setHeadline(juce::Label &);
@@ -117,8 +121,11 @@ public:
   float getCallOutBoxCornerSize(const juce::CallOutBox &) override { return 0.0f; }
   void drawAlertBox(juce::Graphics &, juce::AlertWindow &, const juce::Rectangle<int> &textArea,
                     juce::TextLayout &) override;
+  void fillTextEditorBackground(juce::Graphics &, int width, int height,
+                                juce::TextEditor &) override;
   void drawTextEditorOutline(juce::Graphics &, int width, int height,
                              juce::TextEditor &) override;
+  juce::CaretComponent *createCaretComponent(juce::Component *keyFocusOwner) override;
   void drawScrollbar(juce::Graphics &, juce::ScrollBar &, int x, int y, int width, int height,
                      bool isScrollbarVertical, int thumbStartPosition, int thumbSize,
                      bool isMouseOver, bool isMouseDown) override;
