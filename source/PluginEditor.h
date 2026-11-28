@@ -94,7 +94,7 @@ private:
   juce::TextButton ampTab{"amp"}, pedalsTab{"pedals"}, tunerTab{"tuner"},
       agentTab{"agent"};
   juce::ComboBox presetBox;
-  juce::TextButton prevPreset{"<"}, nextPreset{">"}, savePreset{"save"};
+  juce::TextButton prevPreset{"<"}, nextPreset{">"}, savePreset{"save tone"};
   juce::TextButton settingsButton{"settings"};
 
   // The standalone app's window has no title bar: the header stands in for it.

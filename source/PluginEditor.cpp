@@ -405,7 +405,7 @@ void HeadroomEditor::layoutCanvas() {
   header.removeFromRight(12);
   prevPreset.setBounds(header.removeFromLeft(28));
   header.removeFromLeft(4);
-  savePreset.setBounds(header.removeFromRight(58));
+  savePreset.setBounds(header.removeFromRight(92));
   header.removeFromRight(10);
   nextPreset.setBounds(header.removeFromRight(28));
   header.removeFromRight(4);
